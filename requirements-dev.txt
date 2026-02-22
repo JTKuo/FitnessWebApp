@@ -1,4 +1,6 @@
-# requirements-dev.txt
+# requirements-dev.txt - 開發與測試依賴
 pytest
 black
 flake8
+mypy
+types-requests

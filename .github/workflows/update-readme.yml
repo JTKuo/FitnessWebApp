@@ -3,10 +3,11 @@ name: Update README
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'requirements.txt'
       - 'scripts/update_readme_info.py'
+      - 'README.md'
 
 jobs:
   update-readme:

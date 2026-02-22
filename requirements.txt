@@ -1,5 +1,4 @@
-# requirements.txt
-fastapi
-uvicorn
-pandas
+# requirements.txt - 輔助工具依賴
 requests
+pandas
+pyyaml
