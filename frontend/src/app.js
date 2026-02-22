@@ -739,8 +739,8 @@ const APP = {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
-                    y_weight: { type: 'linear', position: 'left', title: { display: true, text: '重量 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' }, min: 0 },
-                    y_volume: { type: 'linear', position: 'right', title: { display: true, text: '訓練量 (kg)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' }, min: 0 }
+                    y_weight: { type: 'linear', position: 'left', title: { display: true, text: '重量 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' }, min: 0, beginAtZero: true },
+                    y_volume: { type: 'linear', position: 'right', title: { display: true, text: '訓練量 (kg)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' }, min: 0, beginAtZero: true }
                 },
                 plugins: { legend: { labels: { color: '#e5e7eb' } } }
             }
@@ -1010,15 +1010,21 @@ const APP = {
             while (prevNode && prevNode.tagName !== 'H4') { prevNode = prevNode.previousElementSibling; }
             if (prevNode && prevNode.tagName === 'H4') {
                 const newCat = prevNode.textContent;
-                // Cleanup placeholder in this category
-                let scan = prevNode.nextElementSibling;
-                while (scan && scan.tagName !== 'H4') {
-                    if (scan.classList.contains('empty-category-placeholder')) {
-                        const toRemove = scan;
-                        scan = scan.nextElementSibling;
-                        toRemove.remove();
-                    } else {
-                        scan = scan.nextElementSibling;
+                // Cleanup placeholder: any category container that now has a card should have its placeholder hidden/removed
+                const container = el.parentElement;
+                if (container) {
+                    const h4s = [...container.querySelectorAll('h4')];
+                    const catIndex = h4s.indexOf(prevNode);
+                    if (catIndex !== -1) {
+                        const nextH4 = h4s[catIndex + 1];
+                        let scan = prevNode.nextElementSibling;
+                        while (scan && scan !== nextH4) {
+                            if (scan.classList.contains('empty-category-placeholder')) {
+                                scan.classList.add('hidden'); // Use hidden class to hide it
+                                scan.style.display = 'none'; // Double assurance
+                            }
+                            scan = scan.nextElementSibling;
+                        }
                     }
                 }
                 const prs = el.dataset.type === 'best' ? this.state.cache.prData.bests : this.state.cache.prData.repPRs;
