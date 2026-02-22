@@ -602,17 +602,20 @@ const APP = {
         // Body Stats Chart
         const bsCtx = document.getElementById('body-stats-chart')?.getContext('2d');
         if (bsCtx) {
+            const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+            const filteredWeight = (data.weightHistory || []).filter(d => new Date(d.x) >= ninetyDaysAgo);
+            const filteredBF = (data.bodyfatHistory || []).filter(d => new Date(d.x) >= ninetyDaysAgo);
             this.state.charts.bodyStats = new Chart(bsCtx, {
                 type: 'line',
                 data: {
                     datasets: [
-                        { label: '體重 (kg)', data: data.weightHistory, borderColor: '#ffc300', backgroundColor: 'rgba(255,195,0,0.2)', yAxisID: 'y', tension: 0.1, fill: true },
-                        { label: '體脂率 (%)', data: data.bodyfatHistory, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.2)', yAxisID: 'y1', tension: 0.1, fill: true }
+                        { label: '體重 (kg)', data: filteredWeight, borderColor: '#ffc300', backgroundColor: 'rgba(255,195,0,0.2)', yAxisID: 'y', tension: 0.1, fill: true },
+                        { label: '體脂率 (%)', data: filteredBF, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.2)', yAxisID: 'y1', tension: 0.1, fill: true }
                     ]
                 },
                 options: {
                     ...chartOpts, interaction: { mode: 'index', intersect: false }, scales: {
-                        x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
+                        x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: ninetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
                         y: { type: 'linear', position: 'left', title: { display: true, text: '體重 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
                         y1: { type: 'linear', position: 'right', title: { display: true, text: '體脂率 (%)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' } }
                     }, plugins: { legend: { labels: { color: '#e5e7eb' } } }
@@ -623,12 +626,13 @@ const APP = {
         // Volume Chart
         const vCtx = document.getElementById('volume-chart')?.getContext('2d');
         if (vCtx && data.volumeHistory) {
+            const volNinetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
             this.state.charts.volume = new Chart(vCtx, {
                 type: 'line',
                 data: { datasets: [{ label: '總訓練容量 (kg)', data: data.volumeHistory, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.2)', fill: true, tension: 0.1, pointRadius: 4, pointHoverRadius: 8 }] },
                 options: {
                     ...chartOpts, plugins: { legend: { display: false } }, scales: {
-                        x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
+                        x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: volNinetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
                         y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#e5e7eb' }, beginAtZero: true, title: { display: true, text: '訓練容量 (kg)', color: '#e5e7eb' } }
                     }
                 }
@@ -861,6 +865,85 @@ const APP = {
         const modal = document.getElementById('image-modal');
         const img = document.getElementById('modal-image');
         if (modal && img) { modal.classList.add('hidden'); img.src = ''; }
+    },
+
+    // === DRAG AND DROP REORDERING ===
+    _dragState: { el: null, placeholder: null, startY: 0, offsetY: 0, container: null },
+
+    initDragAndDrop(container) {
+        if (!container) return;
+        container.addEventListener('mousedown', (e) => this._onDragStart(e, container));
+        container.addEventListener('touchstart', (e) => this._onDragStart(e, container), { passive: false });
+    },
+
+    _onDragStart(e, container) {
+        const handle = e.target.closest('.js-drag-handle');
+        if (!handle) return;
+        const card = handle.closest('.card');
+        if (!card || card.parentElement !== container) return;
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        const rect = card.getBoundingClientRect();
+        this._dragState.el = card;
+        this._dragState.container = container;
+        this._dragState.offsetY = touch.clientY - rect.top;
+        this._dragState.startY = touch.clientY;
+
+        // Create placeholder
+        const ph = document.createElement('div');
+        ph.className = 'drag-placeholder';
+        ph.style.cssText = `height:${rect.height}px;border:2px dashed var(--color-yellow);border-radius:0.75rem;margin-bottom:0.75rem;opacity:0.5;`;
+        this._dragState.placeholder = ph;
+        card.parentElement.insertBefore(ph, card);
+
+        card.style.position = 'fixed';
+        card.style.zIndex = '1000';
+        card.style.width = rect.width + 'px';
+        card.style.left = rect.left + 'px';
+        card.style.top = rect.top + 'px';
+        card.style.opacity = '0.9';
+        card.style.pointerEvents = 'none';
+        card.classList.add('dragging');
+
+        const moveHandler = (ev) => this._onDragMove(ev);
+        const endHandler = (ev) => { this._onDragEnd(ev); document.removeEventListener('mousemove', moveHandler); document.removeEventListener('mouseup', endHandler); document.removeEventListener('touchmove', moveHandler); document.removeEventListener('touchend', endHandler); };
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('mouseup', endHandler);
+        document.addEventListener('touchmove', moveHandler, { passive: false });
+        document.addEventListener('touchend', endHandler);
+    },
+
+    _onDragMove(e) {
+        if (!this._dragState.el) return;
+        e.preventDefault();
+        const touch = e.touches ? e.touches[0] : e;
+        const el = this._dragState.el;
+        el.style.top = (touch.clientY - this._dragState.offsetY) + 'px';
+
+        // Find insertion point
+        const container = this._dragState.container;
+        const cards = [...container.querySelectorAll('.card:not(.dragging)')];
+        let closestCard = null, closestDist = Infinity;
+        cards.forEach(c => {
+            const r = c.getBoundingClientRect();
+            const mid = r.top + r.height / 2;
+            const dist = touch.clientY - mid;
+            if (dist > 0 && dist < closestDist) { closestDist = dist; closestCard = c; }
+        });
+        const ph = this._dragState.placeholder;
+        if (closestCard) closestCard.after(ph);
+        else if (cards.length > 0) container.insertBefore(ph, cards[0]);
+    },
+
+    _onDragEnd(e) {
+        const { el, placeholder, container } = this._dragState;
+        if (!el || !placeholder) return;
+        el.style.position = ''; el.style.zIndex = ''; el.style.width = ''; el.style.left = ''; el.style.top = ''; el.style.opacity = ''; el.style.pointerEvents = '';
+        el.classList.remove('dragging');
+        container.insertBefore(el, placeholder);
+        placeholder.remove();
+        this._dragState.el = null; this._dragState.placeholder = null; this._dragState.container = null;
+        this.updateDailyTotalVolume();
     }
 };
 
@@ -916,6 +999,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (card) { APP.calculateVolume(card); APP.updateDailyTotalVolume(); }
                 }
             });
+            // Initialize drag-and-drop for workout cards
+            APP.initDragAndDrop(workoutList);
         }
     }
 
