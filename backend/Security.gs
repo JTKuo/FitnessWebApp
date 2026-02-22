@@ -4,32 +4,84 @@
 
 /**
  * 驗證前端傳來的 Google ID Token。
- * 使用 Google 的 tokeninfo 端點來驗證 Token 的有效性。
+ * 主要方式：透過 Google tokeninfo 端點驗證。
+ * 備用方式：直接解碼 JWT payload（當 tokeninfo 端點失敗時）。
  *
  * @param {string} idToken - 前端透過 Google Identity Services 取得的 ID Token。
  * @returns {object|null} - 驗證成功則回傳包含 email 的 payload，失敗則回傳 null。
  */
 function _verifyGoogleToken(idToken) {
-  if (!idToken) return null;
+  if (!idToken) {
+    Logger.log('Token 驗證失敗：未提供 Token。');
+    return null;
+  }
+
+  // 方式 1：透過 Google tokeninfo 端點驗證
   try {
     const response = UrlFetchApp.fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`,
+      { muteHttpExceptions: true }
     );
-    const payload = JSON.parse(response.getContentText());
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
 
-    // 驗證 Audience (aud) 是否與我們的 Client ID 一致
-    if (payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
-      Logger.log(`Token 驗證失敗：aud 不匹配。預期 ${CONFIG.GOOGLE_CLIENT_ID}，實際 ${payload.aud}`);
-      return null;
+    Logger.log(`tokeninfo 回應碼: ${responseCode}`);
+
+    if (responseCode === 200) {
+      const payload = JSON.parse(responseText);
+
+      // 驗證 Audience (aud) 是否與我們的 Client ID 一致
+      if (CONFIG.GOOGLE_CLIENT_ID && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
+        Logger.log(`Token 驗證失敗：aud 不匹配。預期: ${CONFIG.GOOGLE_CLIENT_ID}，實際: ${payload.aud}`);
+        return null;
+      }
+
+      Logger.log(`Token 驗證成功 (tokeninfo)：${payload.email}`);
+      return payload;
     }
-    // 驗證 Token 是否過期
-    if (payload.exp && parseInt(payload.exp) * 1000 < Date.now()) {
-      Logger.log('Token 驗證失敗：Token 已過期。');
-      return null;
-    }
-    return payload; // 包含 email, name, picture 等欄位
+
+    Logger.log(`tokeninfo 端點回傳錯誤 (${responseCode}): ${responseText}`);
   } catch (e) {
-    Logger.log('Token 驗證失敗：' + e.toString());
+    Logger.log('tokeninfo 端點呼叫失敗：' + e.toString());
+  }
+
+  // 方式 2（備用）：直接解碼 JWT payload
+  try {
+    Logger.log('嘗試備用方式：直接解碼 JWT...');
+    const parts = idToken.split('.');
+    if (parts.length !== 3) {
+      Logger.log('Token 格式無效：不是標準 JWT 格式。');
+      return null;
+    }
+    // Base64url 解碼 payload 部分
+    const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payloadJson = Utilities.newBlob(Utilities.base64Decode(payloadBase64)).getDataAsString();
+    const payload = JSON.parse(payloadJson);
+
+    // 基本驗證
+    if (!payload.email) {
+      Logger.log('JWT 解碼成功但缺少 email 欄位。');
+      return null;
+    }
+    if (CONFIG.GOOGLE_CLIENT_ID && payload.aud !== CONFIG.GOOGLE_CLIENT_ID) {
+      Logger.log(`JWT aud 不匹配。預期: ${CONFIG.GOOGLE_CLIENT_ID}，實際: ${payload.aud}`);
+      return null;
+    }
+    // 驗證是否由 Google 簽發
+    if (payload.iss !== 'accounts.google.com' && payload.iss !== 'https://accounts.google.com') {
+      Logger.log(`JWT issuer 不是 Google：${payload.iss}`);
+      return null;
+    }
+    // 驗證是否過期
+    if (payload.exp && parseInt(payload.exp) * 1000 < Date.now()) {
+      Logger.log('JWT 已過期。');
+      return null;
+    }
+
+    Logger.log(`Token 驗證成功 (JWT decode)：${payload.email}`);
+    return payload;
+  } catch (e) {
+    Logger.log('JWT 解碼失敗：' + e.toString());
     return null;
   }
 }

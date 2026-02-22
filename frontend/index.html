@@ -426,6 +426,11 @@
                     </div>
                     <button id="save-photos-btn" class="btn btn-primary btn-glow" style="width: 100%;">儲存體態照片</button>
                 </div>
+
+                <button id="open-compare-modal-btn" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">
+                    <ion-icon name="images-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>
+                    歷史照片比對
+                </button>
             </div>
 
             <!-- ==== Analysis Page ==== -->
@@ -480,6 +485,7 @@
                             <option value="">請選擇一個動作來分析</option>
                         </select>
                         <canvas id="exercise-progress-chart"></canvas>
+                        <div id="exercise-notes-container" class="hidden" style="margin-top: 1rem;"></div>
                     </div>
                 </div>
 
@@ -517,6 +523,209 @@
             </button>
         </nav>
     </div>
+
+    <!-- ====== Modals ====== -->
+
+    <!-- Autocomplete Modal (Add Exercise) -->
+    <div id="autocomplete-modal" class="modal-overlay hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3 class="modal-title">新增動作</h3>
+            <input type="text" id="autocomplete-input" class="form-input" placeholder="輸入動作名稱..." autocomplete="off">
+            <div id="suggestions-list" style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.25rem;">
+            </div>
+            <div class="grid-2" style="margin-top: 1rem;">
+                <button id="autocomplete-cancel" class="btn btn-secondary">取消</button>
+                <button id="autocomplete-confirm" class="btn btn-primary">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Modal (Generic Input) -->
+    <div id="prompt-modal" class="modal-overlay hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3 id="prompt-title" class="modal-title">輸入</h3>
+            <input type="text" id="prompt-input" class="form-input" placeholder="">
+            <div class="grid-2" style="margin-top: 1rem;">
+                <button id="prompt-cancel" class="btn btn-secondary">取消</button>
+                <button id="prompt-confirm" class="btn btn-primary">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-delete-modal" class="modal-overlay hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3 class="modal-title">確認刪除</h3>
+            <p id="delete-confirm-message" style="color: var(--color-text-secondary); margin-bottom: 1rem;">您確定要刪除嗎？</p>
+            <div class="grid-2">
+                <button id="cancel-delete" class="btn btn-secondary">取消</button>
+                <button id="confirm-delete" class="btn btn-danger">確認刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Template Modal -->
+    <div id="load-template-modal" class="modal-overlay hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <h3 class="modal-title">載入訓練範本</h3>
+            <div id="template-list" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+            </div>
+            <button id="load-template-cancel" class="btn btn-secondary" style="width: 100%;">關閉</button>
+        </div>
+    </div>
+
+    <!-- Compare Photos Modal -->
+    <div id="compare-photos-modal" class="modal-overlay hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content" style="max-width: 95vw; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 class="modal-title" style="margin: 0;">體態照片歷史比對</h3>
+                <button id="compare-modal-close"
+                    style="background: none; border: none; color: var(--color-text-secondary); cursor: pointer;">
+                    <ion-icon name="close-outline" style="font-size: 1.5rem;"></ion-icon>
+                </button>
+            </div>
+            <div class="grid-2" style="margin-bottom: 1rem;">
+                <div>
+                    <label class="form-label">之前</label>
+                    <select id="compare-select-before" class="form-select">
+                        <option value="">選擇對比日期 (之前)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">之後</label>
+                    <select id="compare-select-after" class="form-select">
+                        <option value="">選擇對比日期 (之後)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2" style="gap: 0.5rem;">
+                <div>
+                    <div id="compare-front-before"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); overflow: hidden;">
+                        正面</div>
+                    <div id="compare-side-before"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); margin-top: 0.5rem; overflow: hidden;">
+                        側面</div>
+                    <div id="compare-back-before"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); margin-top: 0.5rem; overflow: hidden;">
+                        背面</div>
+                </div>
+                <div>
+                    <div id="compare-front-after"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); overflow: hidden;">
+                        正面</div>
+                    <div id="compare-side-after"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); margin-top: 0.5rem; overflow: hidden;">
+                        側面</div>
+                    <div id="compare-back-after"
+                        style="background: rgba(0,0,0,0.3); aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted); margin-top: 0.5rem; overflow: hidden;">
+                        背面</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Full-screen Modal -->
+    <div id="image-modal" class="modal-overlay hidden">
+        <div id="image-modal-backdrop" class="modal-backdrop"></div>
+        <div
+            style="position: relative; z-index: 10; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+            <button id="image-modal-close"
+                style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; z-index: 11;">
+                <ion-icon name="close-outline"></ion-icon>
+            </button>
+            <img id="modal-image" src="" alt="Full size image"
+                style="max-width: 95vw; max-height: 90vh; object-fit: contain; border-radius: 0.5rem;">
+        </div>
+    </div>
+
+    <!-- Rest Timer Bar -->
+    <div id="rest-timer-bar" class="hidden"
+        style="position: fixed; bottom: 70px; left: 0; right: 0; background: rgba(0,0,0,0.95); border-top: 2px solid var(--color-yellow); padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 1rem; z-index: 100;">
+        <button id="timer-minus-15" class="btn btn-secondary"
+            style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">-15s</button>
+        <span id="timer-display"
+            style="font-size: 1.5rem; font-weight: 700; color: var(--color-yellow); min-width: 65px; text-align: center;">00:00</span>
+        <button id="timer-plus-15" class="btn btn-secondary"
+            style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">+15s</button>
+        <button id="timer-reset" class="btn btn-danger"
+            style="padding: 0.25rem 0.75rem; font-size: 0.875rem;">停止</button>
+    </div>
+
+    <!-- ====== HTML Templates ====== -->
+
+    <!-- Exercise Card Template -->
+    <template id="exercise-card-template">
+        <div class="card" style="padding: 1rem;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,195,0,0.3); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <h3 style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow);"></h3>
+                </div>
+                <button class="js-delete-exercise"
+                    style="padding: 0.25rem; background: none; border: none; color: #ef4444; cursor: pointer;">
+                    <ion-icon name="close-circle-outline" style="font-size: 1.5rem; pointer-events: none;"></ion-icon>
+                </button>
+            </div>
+
+            <p style="font-size: 0.875rem; color: rgba(255,195,0,0.7); margin-bottom: 0.5rem;"
+                class="js-last-performance">查詢中...</p>
+
+            <div
+                style="display: flex; justify-content: flex-end; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.75rem; color: var(--color-text-muted);">總容量:</span>
+                <p style="font-size: 1.25rem; font-weight: 700;" class="js-volume-display">0 公斤</p>
+            </div>
+
+            <div class="js-sets-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+
+            <div style="margin-top: 0.75rem;">
+                <textarea class="js-exercise-note form-textarea" rows="2" placeholder="為這個動作新增備註..."
+                    style="width: 100%;"></textarea>
+            </div>
+            <div class="grid-3" style="margin-top: 0.75rem;">
+                <button class="btn btn-secondary js-start-timer"
+                    style="font-size: 0.8rem; padding: 0.375rem;">開始休息</button>
+                <button class="btn btn-secondary js-copy-set"
+                    style="font-size: 0.8rem; padding: 0.375rem;">複製上一組</button>
+                <button class="btn btn-secondary js-add-set" style="font-size: 0.8rem; padding: 0.375rem;">+
+                    新增組數</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Set Row Template -->
+    <template id="set-row-template">
+        <div class="js-set-row" style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="js-set-number"
+                style="width: 3rem; text-align: center; color: var(--color-text-muted); font-size: 0.875rem; flex-shrink: 0;"></span>
+            <div style="flex-grow: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                    <input type="number" min="0" class="form-input js-weight-input"
+                        style="text-align: center; padding: 0.5rem;">
+                    <select class="form-select js-unit-select"
+                        style="padding: 0.5rem; font-size: 0.8rem; min-width: 50px;">
+                        <option>公斤</option>
+                        <option>磅</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.25rem;">
+                    <input type="number" min="0" class="form-input js-reps-input"
+                        style="text-align: center; padding: 0.5rem;">
+                    <span style="color: var(--color-text-muted);">次</span>
+                </div>
+            </div>
+            <button class="js-delete-set"
+                style="padding: 0.25rem; background: none; border: none; color: var(--color-text-muted); cursor: pointer;">
+                <ion-icon name="trash-outline" style="font-size: 1.25rem; pointer-events: none;"></ion-icon>
+            </button>
+        </div>
+    </template>
 
     <!-- JavaScript Modules -->
     <script src="src/apiService.js"></script>

@@ -611,12 +611,40 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 /* --- Modal --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
-  z-index: 40;
+  z-index: -1;
+}
+
+.modal-content {
+  background-color: var(--color-dark-brown);
+  border: 1px solid var(--color-card-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 28rem;
+  z-index: 1;
+  animation: modal-pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-yellow);
+  margin-bottom: 1rem;
 }
 
 .modal {
