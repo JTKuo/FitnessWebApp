@@ -597,7 +597,10 @@ const APP = {
     renderHistoryCharts(data) {
         // Destroy old charts
         Object.keys(this.state.charts).forEach(k => { if (this.state.charts[k] && typeof this.state.charts[k].destroy === 'function') { try { this.state.charts[k].destroy(); } catch (e) { } } });
-        const chartOpts = { responsive: true, aspectRatio: 1.6 };
+        const chartOpts = {
+            responsive: true,
+            maintainAspectRatio: false
+        };
 
         // Body Stats Chart
         const bsCtx = document.getElementById('body-stats-chart');
@@ -611,6 +614,7 @@ const APP = {
                 bsCtx.classList.add('hidden'); bsEmpty.classList.remove('hidden');
             } else {
                 bsCtx.classList.remove('hidden'); bsEmpty.classList.add('hidden');
+                bsCtx.height = 250; // Set explicit height to prevent compression
                 this.state.charts.bodyStats = new Chart(bsCtx.getContext('2d'), {
                     type: 'line',
                     data: {
@@ -641,6 +645,7 @@ const APP = {
                 vCtx.classList.add('hidden'); vEmpty.classList.remove('hidden');
             } else {
                 vCtx.classList.remove('hidden'); vEmpty.classList.add('hidden');
+                vCtx.height = 200; // Set explicit height
                 this.state.charts.volume = new Chart(vCtx.getContext('2d'), {
                     type: 'line',
                     data: { datasets: [{ label: '總訓練容量 (kg)', data: filteredVolume, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.2)', fill: true, tension: 0.1, pointRadius: 4, pointHoverRadius: 8 }] },
@@ -708,7 +713,10 @@ const APP = {
         const exerciseData = allProgressData[exerciseName];
         if (!exerciseData) return;
 
-        this.state.charts.exerciseProgress = new Chart(ctx, {
+        const canvas = document.getElementById('exercise-progress-chart');
+        if (!canvas) return;
+        canvas.height = 250;
+        this.state.charts.exerciseProgress = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
                 datasets: [
@@ -718,7 +726,7 @@ const APP = {
                 ]
             },
             options: {
-                responsive: true, aspectRatio: 1.6, interaction: { mode: 'index', intersect: false },
+                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
                     y_weight: { type: 'linear', position: 'left', title: { display: true, text: '重量 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
@@ -997,18 +1005,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoDate = document.getElementById('photo-date-input');
     if (photoDate) photoDate.value = new Date().toLocaleDateString('sv');
 
-    // Achievements - Event delegation
-    const prsPage = document.getElementById('page-prs');
-    if (prsPage) {
-        prsPage.addEventListener('click', (e) => {
-            const t = e.target;
-            if (t.id === 'edit-prs-btn' || t.closest('#edit-prs-btn')) {
-                const isEditing = t.classList.toggle('btn-primary');
-                t.textContent = isEditing ? '完成編輯' : '編輯分類';
-                document.querySelectorAll('#page-prs .js-drag-handle').forEach(h => h.classList.toggle('hidden', !isEditing));
-            }
-        });
-    }
+    // Achievements - Edit mode toggle
+    document.getElementById('edit-prs-btn')?.addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const isEditing = btn.classList.toggle('btn-primary');
+        btn.textContent = isEditing ? '完成編輯' : '編輯分類';
+        document.querySelectorAll('#page-prs .js-drag-handle').forEach(h => h.classList.toggle('hidden', !isEditing));
+    });
 
     // Workout page - event delegation
     const workoutPage = document.getElementById('page-workout');
