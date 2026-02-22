@@ -600,63 +600,85 @@ const APP = {
         const chartOpts = { responsive: true, aspectRatio: 1.6 };
 
         // Body Stats Chart
-        const bsCtx = document.getElementById('body-stats-chart')?.getContext('2d');
-        if (bsCtx) {
+        const bsCtx = document.getElementById('body-stats-chart');
+        const bsEmpty = document.getElementById('body-stats-empty');
+        if (bsCtx && bsEmpty) {
             const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
             const filteredWeight = (data.weightHistory || []).filter(d => new Date(d.x) >= ninetyDaysAgo);
             const filteredBF = (data.bodyfatHistory || []).filter(d => new Date(d.x) >= ninetyDaysAgo);
-            this.state.charts.bodyStats = new Chart(bsCtx, {
-                type: 'line',
-                data: {
-                    datasets: [
-                        { label: '體重 (kg)', data: filteredWeight, borderColor: '#ffc300', backgroundColor: 'rgba(255,195,0,0.2)', yAxisID: 'y', tension: 0.1, fill: true },
-                        { label: '體脂率 (%)', data: filteredBF, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.2)', yAxisID: 'y1', tension: 0.1, fill: true }
-                    ]
-                },
-                options: {
-                    ...chartOpts, interaction: { mode: 'index', intersect: false }, scales: {
-                        x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: ninetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
-                        y: { type: 'linear', position: 'left', title: { display: true, text: '體重 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
-                        y1: { type: 'linear', position: 'right', title: { display: true, text: '體脂率 (%)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' } }
-                    }, plugins: { legend: { labels: { color: '#e5e7eb' } } }
-                }
-            });
+
+            if (filteredWeight.length === 0 && filteredBF.length === 0) {
+                bsCtx.classList.add('hidden'); bsEmpty.classList.remove('hidden');
+            } else {
+                bsCtx.classList.remove('hidden'); bsEmpty.classList.add('hidden');
+                this.state.charts.bodyStats = new Chart(bsCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            { label: '體重 (kg)', data: filteredWeight, borderColor: '#ffc300', backgroundColor: 'rgba(255,195,0,0.2)', yAxisID: 'y', tension: 0.1, fill: true },
+                            { label: '體脂率 (%)', data: filteredBF, borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.2)', yAxisID: 'y1', tension: 0.1, fill: true }
+                        ]
+                    },
+                    options: {
+                        ...chartOpts, interaction: { mode: 'index', intersect: false }, scales: {
+                            x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: ninetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
+                            y: { type: 'linear', position: 'left', title: { display: true, text: '體重 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
+                            y1: { type: 'linear', position: 'right', title: { display: true, text: '體脂率 (%)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' } }
+                        }, plugins: { legend: { labels: { color: '#e5e7eb' } } }
+                    }
+                });
+            }
         }
 
         // Volume Chart
-        const vCtx = document.getElementById('volume-chart')?.getContext('2d');
-        if (vCtx && data.volumeHistory) {
+        const vCtx = document.getElementById('volume-chart');
+        const vEmpty = document.getElementById('volume-empty');
+        if (vCtx && vEmpty) {
             const volNinetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-            this.state.charts.volume = new Chart(vCtx, {
-                type: 'line',
-                data: { datasets: [{ label: '總訓練容量 (kg)', data: data.volumeHistory, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.2)', fill: true, tension: 0.1, pointRadius: 4, pointHoverRadius: 8 }] },
-                options: {
-                    ...chartOpts, plugins: { legend: { display: false } }, scales: {
-                        x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: volNinetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
-                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#e5e7eb' }, beginAtZero: true, title: { display: true, text: '訓練容量 (kg)', color: '#e5e7eb' } }
+            const filteredVolume = (data.volumeHistory || []).filter(d => new Date(d.x) >= volNinetyDaysAgo);
+
+            if (filteredVolume.length === 0) {
+                vCtx.classList.add('hidden'); vEmpty.classList.remove('hidden');
+            } else {
+                vCtx.classList.remove('hidden'); vEmpty.classList.add('hidden');
+                this.state.charts.volume = new Chart(vCtx.getContext('2d'), {
+                    type: 'line',
+                    data: { datasets: [{ label: '總訓練容量 (kg)', data: filteredVolume, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.2)', fill: true, tension: 0.1, pointRadius: 4, pointHoverRadius: 8 }] },
+                    options: {
+                        ...chartOpts, plugins: { legend: { display: false } }, scales: {
+                            x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: volNinetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
+                            y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#e5e7eb' }, beginAtZero: true, title: { display: true, text: '訓練容量 (kg)', color: '#e5e7eb' } }
+                        }
                     }
-                }
-            });
+                });
+            }
         }
 
         // Category Distribution Chart
-        const cCtx = document.getElementById('category-distribution-chart')?.getContext('2d');
+        const cCtx = document.getElementById('category-distribution-chart');
+        const cEmpty = document.getElementById('category-distribution-empty');
         const legendContainer = document.getElementById('category-legend-container');
-        if (cCtx && legendContainer && data.categoryVolumeDistribution && Object.keys(data.categoryVolumeDistribution).length > 0) {
-            const fixedOrder = ['胸', '肩', '背', '臀', '腿', '手', '其他'];
-            const origLabels = Object.keys(data.categoryVolumeDistribution);
-            const sorted = fixedOrder.filter(l => origLabels.includes(l));
-            origLabels.forEach(l => { if (!sorted.includes(l)) sorted.push(l); });
-            const sortedData = sorted.map(l => data.categoryVolumeDistribution[l]);
-            const colors = { '胸': 'rgba(239,68,68,0.8)', '背': 'rgba(59,130,246,0.8)', '腿': 'rgba(34,197,94,0.8)', '臀': 'rgba(249,115,22,0.8)', '肩': 'rgba(168,85,247,0.8)', '手': 'rgba(234,179,8,0.8)', '其他': 'rgba(156,163,175,0.8)' };
-            const bgColors = sorted.map(l => colors[l] || colors['其他']);
-            this.state.charts.categoryDistribution = new Chart(cCtx, {
-                type: 'doughnut',
-                data: { labels: sorted, datasets: [{ data: sortedData, backgroundColor: bgColors, borderColor: '#2d2a27', borderWidth: 2 }] },
-                options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.raw?.toLocaleString() + ' kg' } } } }
-            });
-            legendContainer.innerHTML = '';
-            sorted.forEach((label, i) => { legendContainer.innerHTML += `<div style="display:flex;align-items:center;"><span style="width:12px;height:12px;border-radius:2px;margin-right:0.5rem;background:${bgColors[i]}"></span><span style="color:#d1d5db;font-size:0.875rem;">${label}</span></div>`; });
+        if (cCtx && cEmpty && legendContainer) {
+            const hasData = data.categoryVolumeDistribution && Object.keys(data.categoryVolumeDistribution).length > 0;
+            if (!hasData) {
+                cCtx.parentElement.classList.add('hidden'); cEmpty.classList.remove('hidden'); legendContainer.classList.add('hidden');
+            } else {
+                cCtx.parentElement.classList.remove('hidden'); cEmpty.classList.add('hidden'); legendContainer.classList.remove('hidden');
+                const fixedOrder = ['胸', '肩', '背', '臀', '腿', '手', '其他'];
+                const origLabels = Object.keys(data.categoryVolumeDistribution);
+                const sorted = fixedOrder.filter(l => origLabels.includes(l));
+                origLabels.forEach(l => { if (!sorted.includes(l)) sorted.push(l); });
+                const sortedData = sorted.map(l => data.categoryVolumeDistribution[l]);
+                const colors = { '胸': 'rgba(239,68,68,0.8)', '背': 'rgba(59,130,246,0.8)', '腿': 'rgba(34,197,94,0.8)', '臀': 'rgba(249,115,22,0.8)', '肩': 'rgba(168,85,247,0.8)', '手': 'rgba(234,179,8,0.8)', '其他': 'rgba(156,163,175,0.8)' };
+                const bgColors = sorted.map(l => colors[l] || colors['其他']);
+                this.state.charts.categoryDistribution = new Chart(cCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: { labels: sorted, datasets: [{ data: sortedData, backgroundColor: bgColors, borderColor: '#2d2a27', borderWidth: 2 }] },
+                    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ctx.raw?.toLocaleString() + ' kg' } } } }
+                });
+                legendContainer.innerHTML = '';
+                sorted.forEach((label, i) => { legendContainer.innerHTML += `<div style="display:flex;align-items:center;"><span style="width:12px;height:12px;border-radius:2px;margin-right:0.5rem;background:${bgColors[i]}"></span><span style="color:#d1d5db;font-size:0.875rem;">${label}</span></div>`; });
+            }
         }
 
         // Exercise Progress Select
@@ -758,9 +780,12 @@ const APP = {
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.style.cssText = 'padding:0.75rem;margin-bottom:0.5rem;' + (isNew ? 'border-color:#ffc300;' : '');
-                    div.innerHTML = `<p style="font-weight:600;color:var(--color-yellow);margin-bottom:0.25rem;">${b.motion}</p>
-                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;"><span style="color:var(--color-text-muted)">最重:</span><span><strong>${b.heaviestWeight} kg</strong> <small style="color:var(--color-text-muted)">(${b.heaviestDate})</small></span></div>
-                        <div style="display:flex;justify-content:space-between;font-size:0.875rem;"><span style="color:var(--color-text-muted)">E1RM:</span><span><strong>${b.bestEst1RM} kg</strong> <small style="color:var(--color-text-muted)">(${b.e1rmDate})</small></span></div>`;
+                    div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                        <span style="font-weight:600;color:var(--color-yellow);">${b.motion}</span>
+                        <ion-icon name="reorder-three-outline" class="js-drag-handle hidden" style="font-size:1.5rem;color:var(--color-text-muted);cursor:grab;"></ion-icon>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;"><span style="color:var(--color-text-muted)">最重:</span><span><strong>${b.heaviestWeight} kg</strong> <small style="color:var(--color-text-muted)">(${b.heaviestDate})</small></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.875rem;"><span style="color:var(--color-text-muted)">E1RM:</span><span><strong>${b.bestEst1RM} kg</strong> <small style="color:var(--color-text-muted)">(${b.e1rmDate})</small></span></div>`;
                     bestsContainer.appendChild(div);
                 });
             } else {
@@ -789,7 +814,10 @@ const APP = {
                     const div = document.createElement('div');
                     div.className = 'card';
                     div.style.cssText = 'padding:0.75rem;margin-bottom:0.5rem;';
-                    let html = `<p style="font-weight:600;margin-bottom:0.5rem;">${motion}</p>`;
+                    let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <span style="font-weight:600;">${motion}</span>
+                        <ion-icon name="reorder-three-outline" class="js-drag-handle hidden" style="font-size:1.5rem;color:var(--color-text-muted);cursor:grab;"></ion-icon>
+                    </div>`;
                     prs.forEach(pr => {
                         html += `<div style="display:flex;justify-content:space-between;font-size:0.875rem;background:rgba(0,0,0,0.3);padding:0.25rem 0.5rem;border-radius:0.25rem;margin-bottom:0.25rem;">
                             <span style="color:var(--color-yellow);width:3rem;">${pr.rmCategory}RM</span><span style="flex-grow:1">${pr.weight} kg</span><small style="color:var(--color-text-muted)">${pr.date}</small></div>`;
@@ -804,6 +832,10 @@ const APP = {
                 repPRsContainer.appendChild(p);
             }
         });
+
+        // Initialize drag and drop for PR containers
+        this.initDragAndDrop(bestsContainer);
+        this.initDragAndDrop(repPRsContainer);
     },
 
     // === MODALS ===
@@ -964,6 +996,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (workoutDate) workoutDate.value = new Date().toLocaleDateString('sv');
     const photoDate = document.getElementById('photo-date-input');
     if (photoDate) photoDate.value = new Date().toLocaleDateString('sv');
+
+    // Achievements - Event delegation
+    const prsPage = document.getElementById('page-prs');
+    if (prsPage) {
+        prsPage.addEventListener('click', (e) => {
+            const t = e.target;
+            if (t.id === 'edit-prs-btn' || t.closest('#edit-prs-btn')) {
+                const isEditing = t.classList.toggle('btn-primary');
+                t.textContent = isEditing ? '完成編輯' : '編輯分類';
+                document.querySelectorAll('#page-prs .js-drag-handle').forEach(h => h.classList.toggle('hidden', !isEditing));
+            }
+        });
+    }
 
     // Workout page - event delegation
     const workoutPage = document.getElementById('page-workout');
