@@ -538,8 +538,8 @@ const APP = {
             btn.textContent = name;
             btn.dataset.templateName = name;
             const del = document.createElement('button');
-            del.style.cssText = 'padding:0.5rem;background:none;border:none;color:var(--color-text-muted);cursor:pointer;';
-            del.innerHTML = '<ion-icon name="close-circle-outline" style="font-size:1.25rem;pointer-events:none;"></ion-icon>';
+            del.style.cssText = 'padding:0.5rem;background:none;border:none;color:#ef4444;cursor:pointer;';
+            del.innerHTML = '<ion-icon name="close-circle-outline" style="font-size:1.5rem;pointer-events:none;"></ion-icon>';
             del.className = 'js-delete-template';
             del.dataset.templateName = name;
             item.appendChild(btn);
@@ -587,9 +587,10 @@ const APP = {
     },
 
     showHistoryState(state) {
-        ['history-loading', 'history-content', 'history-empty'].forEach(id => {
+        const map = { 'history-loading': 'loading', 'history-content': 'content', 'history-empty': 'empty' };
+        Object.entries(map).forEach(([id, s]) => {
             const el = document.getElementById(id);
-            if (el) el.style.display = id.includes(state === 'loading' ? 'loading' : state === 'content' ? 'content' : 'empty') ? 'block' : 'none';
+            if (el) el.classList.toggle('hidden', s !== state);
         });
     },
 
@@ -722,9 +723,10 @@ const APP = {
     },
 
     showPRsState(state) {
-        ['prs-loading', 'prs-content', 'prs-empty'].forEach(id => {
+        const map = { 'prs-loading': 'loading', 'prs-content': 'content', 'prs-empty': 'empty' };
+        Object.entries(map).forEach(([id, s]) => {
             const el = document.getElementById(id);
-            if (el) el.style.display = id.includes(state === 'loading' ? 'loading' : state === 'content' ? 'content' : 'empty') ? 'block' : 'none';
+            if (el) el.classList.toggle('hidden', s !== state);
         });
     },
 
