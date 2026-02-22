@@ -80,29 +80,40 @@ const APP = {
 async function loadInitialData() {
     try {
         const data = await API_SERVICE.getInitialData();
+        const profile = data.profile || {};
+        const profileData = profile.profileData || {};
 
         // Update welcome message
         const welcomeEl = document.getElementById('welcome-message');
-        if (data.profile && data.profile.name) {
-            welcomeEl.textContent = `歡迎回來，${data.profile.name}`;
-        } else if (APP.currentUser) {
-            welcomeEl.textContent = `歡迎回來，${APP.currentUser.name}`;
-        }
+        const displayName = profileData.name || profile.name || APP.currentUser?.name || '';
+        welcomeEl.textContent = `歡迎回來，${displayName}`;
 
         // Check admin status
-        if (data.isAdmin) {
+        if (profile.isAdmin) {
             APP.isAdmin = true;
             document.getElementById('admin-bar').classList.remove('hidden');
+
+            // Populate admin user switcher
+            if (data.allUsers && data.allUsers.length > 0) {
+                const switcher = document.getElementById('user-switcher');
+                switcher.innerHTML = '';
+                data.allUsers.forEach(user => {
+                    const opt = document.createElement('option');
+                    opt.value = user.email;
+                    opt.textContent = `${user.name || user.email}`;
+                    switcher.appendChild(opt);
+                });
+            }
         }
 
         // Store profile data
-        APP.profileData = data.profile || {};
+        APP.profileData = profileData;
 
         // Populate profile view
-        populateProfile(APP.profileData);
+        populateProfile(profileData);
 
         // Check photo reminder
-        if (data.photoReminder) {
+        if (profile.shouldShowReminder) {
             document.getElementById('reminder-banner').classList.remove('hidden');
         }
 
