@@ -456,7 +456,9 @@
                         <h3
                             style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
                             近 3 個月體態趨勢</h3>
-                        <canvas id="body-stats-chart"></canvas>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="body-stats-chart"></canvas>
+                        </div>
                         <div id="body-stats-empty" class="hidden"
                             style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
                             <ion-icon name="analytics-outline"
@@ -487,7 +489,9 @@
                         <h3
                             style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
                             近 3 個月訓練容量趨勢</h3>
-                        <canvas id="volume-chart"></canvas>
+                        <div style="height: 200px; position: relative;">
+                            <canvas id="volume-chart"></canvas>
+                        </div>
                         <div id="volume-empty" class="hidden"
                             style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
                             <ion-icon name="bar-chart-outline"
@@ -503,7 +507,9 @@
                         <select id="exercise-progress-select" class="form-select" style="margin-bottom: 1rem;">
                             <option value="">請選擇一個動作來分析</option>
                         </select>
-                        <canvas id="exercise-progress-chart"></canvas>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="exercise-progress-chart"></canvas>
+                        </div>
                         <div id="exercise-notes-container" class="hidden" style="margin-top: 1rem;"></div>
                     </div>
                 </div>

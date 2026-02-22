@@ -613,8 +613,7 @@ const APP = {
             if (filteredWeight.length === 0 && filteredBF.length === 0) {
                 bsCtx.classList.add('hidden'); bsEmpty.classList.remove('hidden');
             } else {
-                bsCtx.classList.remove('hidden'); bsEmpty.classList.add('hidden');
-                bsCtx.height = 250; // Set explicit height to prevent compression
+                bsCtx.style.height = '250px';
                 this.state.charts.bodyStats = new Chart(bsCtx.getContext('2d'), {
                     type: 'line',
                     data: {
@@ -626,8 +625,8 @@ const APP = {
                     options: {
                         ...chartOpts, interaction: { mode: 'index', intersect: false }, scales: {
                             x: { type: 'time', time: { unit: 'week', displayFormats: { week: 'MMM d' } }, min: ninetyDaysAgo.toISOString(), max: new Date().toISOString(), grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af', maxRotation: 45 } },
-                            y: { type: 'linear', position: 'left', title: { display: true, text: '體重 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
-                            y1: { type: 'linear', position: 'right', title: { display: true, text: '體脂率 (%)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' } }
+                            y: { type: 'linear', position: 'left', title: { display: true, text: '體重 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' }, suggestedMin: 0 },
+                            y1: { type: 'linear', position: 'right', title: { display: true, text: '體脂率 (%)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' }, suggestedMin: 0 }
                         }, plugins: { legend: { labels: { color: '#e5e7eb' } } }
                     }
                 });
@@ -645,7 +644,7 @@ const APP = {
                 vCtx.classList.add('hidden'); vEmpty.classList.remove('hidden');
             } else {
                 vCtx.classList.remove('hidden'); vEmpty.classList.add('hidden');
-                vCtx.height = 200; // Set explicit height
+                vCtx.style.height = '200px';
                 this.state.charts.volume = new Chart(vCtx.getContext('2d'), {
                     type: 'line',
                     data: { datasets: [{ label: '總訓練容量 (kg)', data: filteredVolume, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.2)', fill: true, tension: 0.1, pointRadius: 4, pointHoverRadius: 8 }] },
@@ -715,7 +714,7 @@ const APP = {
 
         const canvas = document.getElementById('exercise-progress-chart');
         if (!canvas) return;
-        canvas.height = 250;
+        canvas.style.height = '250px';
         this.state.charts.exerciseProgress = new Chart(canvas.getContext('2d'), {
             type: 'line',
             data: {
@@ -729,8 +728,8 @@ const APP = {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                 scales: {
                     x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#9ca3af' } },
-                    y_weight: { type: 'linear', position: 'left', title: { display: true, text: '重量 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' } },
-                    y_volume: { type: 'linear', position: 'right', title: { display: true, text: '訓練量 (kg)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' } }
+                    y_weight: { type: 'linear', position: 'left', title: { display: true, text: '重量 (kg)', color: '#ffc300' }, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#ffc300' }, suggestedMin: 0 },
+                    y_volume: { type: 'linear', position: 'right', title: { display: true, text: '訓練量 (kg)', color: '#38bdf8' }, grid: { drawOnChartArea: false }, ticks: { color: '#38bdf8' }, suggestedMin: 0 }
                 },
                 plugins: { legend: { labels: { color: '#e5e7eb' } } }
             }
@@ -787,6 +786,8 @@ const APP = {
                     const isNew = (b.heaviestDateISO && new Date(b.heaviestDateISO).toDateString() === todayStr);
                     const div = document.createElement('div');
                     div.className = 'card';
+                    div.dataset.motion = b.motion;
+                    div.dataset.type = 'best';
                     div.style.cssText = 'padding:0.75rem;margin-bottom:0.5rem;' + (isNew ? 'border-color:#ffc300;' : '');
                     div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
                         <span style="font-weight:600;color:var(--color-yellow);">${b.motion}</span>
@@ -821,6 +822,8 @@ const APP = {
                     const prs = groupedRep[cat][motion].sort((a, b) => a.rmCategory - b.rmCategory);
                     const div = document.createElement('div');
                     div.className = 'card';
+                    div.dataset.motion = motion;
+                    div.dataset.type = 'rep';
                     div.style.cssText = 'padding:0.75rem;margin-bottom:0.5rem;';
                     let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
                         <span style="font-weight:600;">${motion}</span>
@@ -960,19 +963,21 @@ const APP = {
         const el = this._dragState.el;
         el.style.top = (touch.clientY - this._dragState.offsetY) + 'px';
 
-        // Find insertion point
+        // Find insertion point - look at all children to allow dropping after titles (h4)
         const container = this._dragState.container;
-        const cards = [...container.querySelectorAll('.card:not(.dragging)')];
-        let closestCard = null, closestDist = Infinity;
-        cards.forEach(c => {
+        const children = [...container.children].filter(c => !c.classList.contains('dragging') && !c.classList.contains('drag-placeholder'));
+
+        let closestEl = null, closestDist = Infinity;
+        children.forEach(c => {
             const r = c.getBoundingClientRect();
             const mid = r.top + r.height / 2;
             const dist = touch.clientY - mid;
-            if (dist > 0 && dist < closestDist) { closestDist = dist; closestCard = c; }
+            if (dist > 0 && dist < closestDist) { closestDist = dist; closestEl = c; }
         });
+
         const ph = this._dragState.placeholder;
-        if (closestCard) closestCard.after(ph);
-        else if (cards.length > 0) container.insertBefore(ph, cards[0]);
+        if (closestEl) closestEl.after(ph);
+        else if (children.length > 0) container.insertBefore(ph, children[0]);
     },
 
     _onDragEnd(e) {
@@ -982,6 +987,21 @@ const APP = {
         el.classList.remove('dragging');
         container.insertBefore(el, placeholder);
         placeholder.remove();
+
+        // Data sync for PR cards
+        if (el.dataset.motion && this.state.cache.prData) {
+            let prevNode = el.previousElementSibling;
+            while (prevNode && prevNode.tagName !== 'H4') { prevNode = prevNode.previousElementSibling; }
+            if (prevNode && prevNode.tagName === 'H4') {
+                const newCat = prevNode.textContent;
+                const prs = el.dataset.type === 'best' ? this.state.cache.prData.bests : this.state.cache.prData.repPRs;
+                if (prs) {
+                    const item = prs.find(p => p.motion === el.dataset.motion);
+                    if (item) item.category = newCat;
+                }
+            }
+        }
+
         this._dragState.el = null; this._dragState.placeholder = null; this._dragState.container = null;
         this.updateDailyTotalVolume();
     }
