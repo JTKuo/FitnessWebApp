@@ -1,223 +1,210 @@
 /**
  * app.js - 主應用程式邏輯
- * 控制 Google 登入流程、頁面導覽、資料初始化
+ * 處理 Google 登入、頁面導覽、管理員面板、通知系統。
+ * 依照原始 GAS MVP 的工業風格重新設計。
  */
 
-const App = (() => {
-    let _currentUser = null;
-    let _initialData = null;
+// --- Google Login Callback ---
+function handleGoogleLogin(response) {
+    if (response.credential) {
+        API_SERVICE.setToken(response.credential);
 
-    /**
-     * Google 登入成功的 Callback。
-     */
-    function handleGoogleLogin(response) {
-        const idToken = response.credential;
-        API_SERVICE.setToken(idToken);
-
-        // 解碼 JWT 取得使用者基本資訊，顯示在 UI 上
-        const payload = JSON.parse(atob(idToken.split('.')[1]));
-        _currentUser = {
+        // Decode JWT to get user info
+        const payload = JSON.parse(atob(response.credential.split('.')[1]));
+        APP.currentUser = {
             email: payload.email,
-            name: payload.name,
-            picture: payload.picture
+            name: payload.name || payload.email.split('@')[0],
+            picture: payload.picture || ''
         };
 
-        // 顯示載入中畫面
-        showLoading(true);
-        hideLogin();
+        // Hide login, show app
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
 
-        // 從後端載入初始資料
         loadInitialData();
     }
+}
 
-    /**
-     * 從 GAS 後端載入初始資料。
-     */
-    async function loadInitialData() {
-        try {
-            const result = await API_SERVICE.getInitialData();
+// --- App Core ---
+const APP = {
+    currentUser: null,
+    currentPage: 'dashboard',
+    isAdmin: false,
+    profileData: null,
 
-            if (result.error) {
-                showError(result.error);
-                showLogin();
-                return;
-            }
+    // Toast notification
+    showToast(message, type = 'success') {
+        const toast = document.getElementById('toast-notification');
+        const toastMsg = document.getElementById('toast-message');
+        toastMsg.textContent = message;
+        toast.className = `toast toast-${type} show`;
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.className = 'toast hidden', 500);
+        }, 3000);
+    },
 
-            _initialData = result;
-
-            // 更新使用者介面
-            updateUserInfo(result.profile);
-            showMainApp();
-            showLoading(false);
-
-            // 如果是管理員，顯示使用者切換
-            if (result.profile.isAdmin && result.allUsers.length > 0) {
-                showAdminPanel(result.allUsers);
-            }
-
-            // 顯示體態照片提醒
-            if (result.profile.shouldShowReminder) {
-                showPhotoReminder();
-            }
-
-        } catch (error) {
-            showError('無法載入初始資料: ' + error.message);
-            showLogin();
-            showLoading(false);
-        }
-    }
-
-    /**
-     * 登出。
-     */
-    function logout() {
-        API_SERVICE.clearToken();
-        _currentUser = null;
-        _initialData = null;
-        hideMainApp();
-        showLogin();
-        // 重置 Google 登入狀態
-        google.accounts.id.disableAutoSelect();
-    }
-
-
-    // =======================================================
-    // UI 操作函式
-    // =======================================================
-
-    function showLogin() {
-        document.getElementById('login-section').classList.remove('hidden');
-    }
-
-    function hideLogin() {
-        document.getElementById('login-section').classList.add('hidden');
-    }
-
-    function showMainApp() {
-        document.getElementById('main-app').classList.remove('hidden');
-    }
-
-    function hideMainApp() {
-        document.getElementById('main-app').classList.add('hidden');
-    }
-
-    function showLoading(show) {
-        const el = document.getElementById('loading-overlay');
-        if (show) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-    }
-
-    function showError(message) {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'toast toast-error show';
-        setTimeout(() => toast.classList.remove('show'), 5000);
-    }
-
-    function showSuccess(message) {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = 'toast toast-success show';
-        setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    function updateUserInfo(profile) {
-        const el = document.getElementById('user-name');
-        if (el) el.textContent = profile.name || profile.email;
-        const avatarEl = document.getElementById('user-avatar');
-        if (avatarEl && _currentUser.picture) {
-            avatarEl.src = _currentUser.picture;
-            avatarEl.classList.remove('hidden');
-        }
-    }
-
-    function showAdminPanel(users) {
-        const adminPanel = document.getElementById('admin-panel');
-        if (!adminPanel) return;
-        adminPanel.classList.remove('hidden');
-        const select = document.getElementById('user-select');
-        if (!select) return;
-        select.innerHTML = '<option value="">-- 選擇使用者 --</option>';
-        users.forEach(u => {
-            const opt = document.createElement('option');
-            opt.value = u.email;
-            opt.textContent = `${u.name} (${u.email})`;
-            select.appendChild(opt);
+    // Page navigation
+    navigateTo(pageId) {
+        this.currentPage = pageId;
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(p => {
+            p.classList.add('hidden');
+            p.classList.remove('active');
         });
+        // Show target page
+        const targetPage = document.getElementById(`page-${pageId}`);
+        if (targetPage) {
+            targetPage.classList.remove('hidden');
+            targetPage.classList.add('active');
+        }
+        // Update nav
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.page === pageId);
+        });
+    },
+
+    // Show/hide loading overlay
+    setLoading(show) {
+        const overlay = document.getElementById('loading-overlay');
+        if (show) {
+            overlay.classList.remove('hidden');
+        } else {
+            overlay.classList.add('hidden');
+        }
     }
+};
 
-    function showPhotoReminder() {
-        const reminder = document.getElementById('photo-reminder');
-        if (reminder) reminder.classList.remove('hidden');
+// --- Load Initial Data ---
+async function loadInitialData() {
+    try {
+        const data = await API_SERVICE.getInitialData();
+
+        // Update welcome message
+        const welcomeEl = document.getElementById('welcome-message');
+        if (data.profile && data.profile.name) {
+            welcomeEl.textContent = `歡迎回來，${data.profile.name}`;
+        } else if (APP.currentUser) {
+            welcomeEl.textContent = `歡迎回來，${APP.currentUser.name}`;
+        }
+
+        // Check admin status
+        if (data.isAdmin) {
+            APP.isAdmin = true;
+            document.getElementById('admin-bar').classList.remove('hidden');
+        }
+
+        // Store profile data
+        APP.profileData = data.profile || {};
+
+        // Populate profile view
+        populateProfile(APP.profileData);
+
+        // Check photo reminder
+        if (data.photoReminder) {
+            document.getElementById('reminder-banner').classList.remove('hidden');
+        }
+
+        // Hide loading
+        APP.setLoading(false);
+    } catch (error) {
+        APP.showToast('無法載入初始資料: ' + error.message, 'error');
+        APP.setLoading(false);
     }
+}
 
+// --- Populate Profile View ---
+function populateProfile(profile) {
+    if (!profile) return;
 
-    // =======================================================
-    // 頁面導覽
-    // =======================================================
+    document.querySelectorAll('.view-mode').forEach(el => {
+        const input = el.nextElementSibling;
+        if (input && input.dataset && input.dataset.key) {
+            const key = input.dataset.key;
+            const value = profile[key];
+            if (value !== undefined && value !== null && value !== '') {
+                el.textContent = value;
+                if (input.tagName === 'SELECT') {
+                    // Set select value
+                    for (let i = 0; i < input.options.length; i++) {
+                        if (input.options[i].value === String(value) || input.options[i].text === String(value)) {
+                            input.selectedIndex = i;
+                            break;
+                        }
+                    }
+                } else {
+                    input.value = value;
+                }
+            } else {
+                el.textContent = el.dataset.placeholder || '未設定';
+            }
+        }
+    });
 
-    function navigateTo(page) {
-        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
-        const target = document.getElementById(`page-${page}`);
-        if (target) target.classList.remove('hidden');
+    // Update BMR, TDEE, Water
+    if (profile.bmr) document.getElementById('bmr-display').textContent = Math.round(profile.bmr);
+    if (profile.tdee) document.getElementById('tdee-display').textContent = Math.round(profile.tdee);
+    if (profile.water) document.getElementById('water-display').textContent = Math.round(profile.water);
+}
 
-        // 更新導覽列的 active 狀態
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        const activeNav = document.querySelector(`[data-page="${page}"]`);
-        if (activeNav) activeNav.classList.add('active');
+// --- Profile Edit Mode ---
+function toggleProfileEdit(editMode) {
+    document.querySelectorAll('.view-mode').forEach(el => el.classList.toggle('hidden', editMode));
+    document.querySelectorAll('.edit-mode').forEach(el => el.classList.toggle('hidden', !editMode));
+    document.getElementById('edit-profile-btn').classList.toggle('hidden', editMode);
+    document.getElementById('edit-profile-actions').classList.toggle('hidden', !editMode);
+}
+
+// --- Save Profile ---
+async function saveProfile() {
+    const profileData = {};
+    document.querySelectorAll('.profile-input').forEach(input => {
+        if (input.dataset.key) {
+            profileData[input.dataset.key] = input.value;
+        }
+    });
+
+    try {
+        APP.setLoading(true);
+        const result = await API_SERVICE.saveProfileData(profileData);
+        if (result.status === 'success') {
+            APP.showToast('個人資料已儲存！', 'success');
+            toggleProfileEdit(false);
+            // Reload to refresh view
+            loadInitialData();
+        } else {
+            APP.showToast(result.error || '儲存失敗', 'error');
+        }
+    } catch (error) {
+        APP.showToast('儲存失敗: ' + error.message, 'error');
+    } finally {
+        APP.setLoading(false);
     }
+}
 
-
-    // =======================================================
-    // Public API
-    // =======================================================
-
-    return {
-        handleGoogleLogin,
-        logout,
-        navigateTo,
-        showLoading,
-        showError,
-        showSuccess,
-        getInitialData: () => _initialData,
-        getCurrentUser: () => _currentUser
-    };
-})();
-
-
-// =======================================================
-// DOM Ready - 初始化事件綁定
-// =======================================================
-
+// --- Event Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 導覽列
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            App.navigateTo(item.dataset.page);
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.dataset.page) APP.navigateTo(btn.dataset.page);
         });
     });
 
-    // 登出按鈕
-    const logoutBtn = document.getElementById('btn-logout');
-    if (logoutBtn) logoutBtn.addEventListener('click', App.logout);
+    // Profile edit buttons
+    document.getElementById('edit-profile-btn')?.addEventListener('click', () => toggleProfileEdit(true));
+    document.getElementById('cancel-profile-btn')?.addEventListener('click', () => toggleProfileEdit(false));
+    document.getElementById('save-profile-btn')?.addEventListener('click', saveProfile);
 
-    // 管理員使用者切換
-    const userSelect = document.getElementById('user-select');
-    if (userSelect) {
-        userSelect.addEventListener('change', async (e) => {
-            const email = e.target.value;
-            if (email) {
-                App.showLoading(true);
-                try {
-                    const data = await API_SERVICE.getInitialData(email);
-                    // 重新載入該使用者的資料
-                    location.reload(); // 簡化版：重新載入頁面
-                } catch (err) {
-                    App.showError(err.message);
-                }
-                App.showLoading(false);
-            }
-        });
+    // Set today's date for workout
+    const dateInput = document.getElementById('workout-date-input');
+    if (dateInput) {
+        dateInput.valueAsDate = new Date();
+    }
+
+    // Set today's date for photo
+    const photoDateInput = document.getElementById('photo-date-input');
+    if (photoDateInput) {
+        photoDateInput.valueAsDate = new Date();
     }
 });

@@ -1,297 +1,526 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="個人化健身暨健康追蹤系統 - 記錄訓練、追蹤體態、分析進度">
-    <title>Fitness Tracker - 個人化健身追蹤</title>
+    <title>個人化健身暨健康追蹤</title>
+    <meta name="description" content="個人化的健身記錄與健康數據追蹤系統，使用 Google 帳號安全登入。">
 
-    <!-- Google Fonts -->
+    <!-- Google Fonts: Exo 2 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Ionicons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <!-- Styles -->
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-
-    <!-- ============================== -->
-    <!-- Loading Overlay                -->
-    <!-- ============================== -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <div class="spinner"></div>
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="toast hidden">
+        <span id="toast-message"></span>
     </div>
 
-    <!-- ============================== -->
-    <!-- Toast Notification             -->
-    <!-- ============================== -->
-    <div id="toast" class="toast"></div>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loader-container">
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+            <div class="loader-ring"></div>
+        </div>
+    </div>
 
-    <!-- ============================== -->
-    <!-- Login Section                  -->
-    <!-- ============================== -->
-    <section id="login-section" class="login-section">
+    <!-- ====== Login Section ====== -->
+    <div id="login-section" class="login-section">
         <div class="login-card">
             <div class="logo-icon">🏋️</div>
-            <h1>Fitness Tracker</h1>
+            <h1>個人化健身追蹤</h1>
             <p>使用 Google 帳號登入，開始追蹤您的訓練進度</p>
-
-            <!-- 
-        ⚠️ 請將 data-client_id 替換為您在 Google Cloud Console 建立的 OAuth2 Client ID。
-        教學：https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
-      -->
             <div id="g_id_onload"
                 data-client_id="562000329369-jvje8ds77eahdjj9igkebbsal2m30lnv.apps.googleusercontent.com"
                 data-callback="handleGoogleLogin" data-auto_prompt="false">
             </div>
             <div id="g_id_signin" class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black"
-                data-text="signin_with" data-size="large" data-logo_alignment="left">
+                data-text="signin_with" data-size="large" data-logo_alignment="left" data-locale="zh-TW">
             </div>
         </div>
-    </section>
+    </div>
 
-    <!-- ============================== -->
-    <!-- Main Application               -->
-    <!-- ============================== -->
-    <div id="main-app" class="hidden">
+    <!-- ====== Main App Container ====== -->
+    <div id="app-container" class="main-container hidden">
 
-        <!-- Top Navbar -->
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <span class="brand-icon">🏋️</span>
-                <span>Fitness Tracker</span>
-            </div>
-            <div class="navbar-user">
-                <img id="user-avatar" class="user-avatar hidden" alt="avatar" src="">
-                <span id="user-name" style="font-size: 0.875rem; color: #94a3b8;"></span>
-                <button id="btn-logout" class="btn-logout">登出</button>
-            </div>
-        </nav>
+        <!-- Admin Bar (Hidden by default) -->
+        <div id="admin-bar" class="admin-bar hidden">
+            <label for="user-switcher">
+                <ion-icon name="shield-checkmark-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>
+                管理者模式
+            </label>
+            <select id="user-switcher" class="form-select">
+                <!-- User list dynamically populated by JS -->
+            </select>
+        </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="container">
+        <!-- Main Content Area -->
+        <main style="flex-grow: 1; padding: 1rem;">
 
-                <!-- Admin Panel (Hidden by default) -->
-                <div id="admin-panel" class="admin-panel hidden">
-                    <span class="admin-badge">👑 管理員</span>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">切換使用者</label>
-                        <select id="user-select" class="form-select"></select>
-                    </div>
+            <!-- ==== Dashboard Page ==== -->
+            <div id="page-dashboard" class="page active page-content">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <h1 class="page-title" style="margin-bottom: 0.25rem;">身分驗證成功</h1>
+                    <p id="welcome-message" style="color: var(--color-text-secondary);">系統待命中...</p>
                 </div>
 
-                <!-- Photo Reminder (Hidden by default) -->
-                <div id="photo-reminder" class="photo-reminder hidden">
-                    <span style="font-size: 1.5rem;">📸</span>
-                    <div>
-                        <strong>體態記錄提醒</strong>
-                        <p style="font-size: 0.875rem; color: #94a3b8; margin: 0;">距離上次拍照已超過 30 天，建議記錄最新體態！</p>
-                    </div>
+                <!-- Photo Reminder Banner (Hidden by default) -->
+                <div id="reminder-banner" class="photo-reminder hidden">
+                    <p class="reminder-title">
+                        <ion-icon name="camera-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>
+                        體態記錄提醒
+                    </p>
+                    <p class="reminder-text">距離上次拍照已超過 30 天，建議記錄最新體態！</p>
                 </div>
 
-                <!-- ============================== -->
-                <!-- Page: Dashboard                -->
-                <!-- ============================== -->
-                <div id="page-dashboard" class="page-content">
-                    <h2 style="margin-bottom: 1rem;">📊 總覽</h2>
+                <!-- Profile Section -->
+                <div id="profile-section" style="margin-top: 2rem;">
 
-                    <div class="stats-grid" style="margin-bottom: 1.5rem;">
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-weight">--</div>
-                            <div class="stat-label">體重 (kg)</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-bodyfat">--</div>
-                            <div class="stat-label">體脂率 (%)</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-workouts">--</div>
-                            <div class="stat-label">訓練次數</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="stat-prs">--</div>
-                            <div class="stat-label">個人紀錄</div>
-                        </div>
-                    </div>
-
+                    <!-- Basic Info Card -->
                     <div class="card">
                         <div class="card-header">
-                            <h3 class="card-title">快速操作</h3>
-                        </div>
-                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                            <button class="btn btn-primary" data-page="workout" onclick="App.navigateTo('workout')">🏋️
-                                開始訓練</button>
-                            <button class="btn btn-secondary" data-page="profile" onclick="App.navigateTo('profile')">👤
-                                個人資料</button>
-                            <button class="btn btn-secondary" data-page="analysis"
-                                onclick="App.navigateTo('analysis')">📈 數據分析</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============================== -->
-                <!-- Page: Workout                  -->
-                <!-- ============================== -->
-                <div id="page-workout" class="page-content hidden">
-                    <h2 style="margin-bottom: 1rem;">🏋️ 訓練記錄</h2>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">今日訓練</h3>
+                            <h3 class="card-title">
+                                <ion-icon name="person-outline"
+                                    style="vertical-align: middle; margin-right: 0.5rem;"></ion-icon>
+                                個人基本資訊
+                            </h3>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">選擇範本</label>
-                            <select id="template-select" class="form-select">
-                                <option value="">-- 自由訓練 --</option>
-                            </select>
+                            <label class="form-label">姓名 / 暱稱</label>
+                            <p class="view-mode" data-placeholder="未設定">未設定</p>
+                            <input data-key="name" type="text" placeholder="方便管理的稱呼"
+                                class="edit-mode hidden form-input profile-input">
                         </div>
-                        <div id="workout-exercises">
-                            <!-- 動態產生的訓練項目 -->
-                            <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
-                                選擇範本或手動新增動作來開始訓練
-                            </p>
-                        </div>
-                        <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
-                            <button class="btn btn-secondary" id="btn-add-exercise">➕ 新增動作</button>
-                            <button class="btn btn-primary" id="btn-save-workout">💾 儲存訓練</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============================== -->
-                <!-- Page: Profile                  -->
-                <!-- ============================== -->
-                <div id="page-profile" class="page-content hidden">
-                    <h2 style="margin-bottom: 1rem;">👤 個人資料</h2>
-                    <div class="card">
-                        <form id="profile-form">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                                <div class="form-group">
-                                    <label class="form-label">姓名</label>
-                                    <input type="text" class="form-input" id="profile-name" placeholder="您的名字">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">年齡</label>
-                                    <input type="number" class="form-input" id="profile-age" placeholder="25">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">身高 (cm)</label>
-                                    <input type="number" class="form-input" id="profile-height" placeholder="175">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">體重 (kg)</label>
-                                    <input type="number" class="form-input" id="profile-weight" step="0.1"
-                                        placeholder="70">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">體脂率 (%)</label>
-                                    <input type="number" class="form-input" id="profile-bodyfat" step="0.1"
-                                        placeholder="15">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">性別</label>
-                                    <select class="form-select" id="profile-gender">
-                                        <option value="">-- 選擇 --</option>
-                                        <option value="male">男</option>
-                                        <option value="female">女</option>
-                                    </select>
-                                </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">年齡</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <input data-key="age" type="number" min="0"
+                                    class="edit-mode hidden form-input profile-input">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">訓練方向</label>
-                                <textarea class="form-input form-textarea" id="profile-direction" rows="3"
-                                    placeholder="例如：增肌減脂、提升肌力..."></textarea>
+                                <label class="form-label">性別</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <select data-key="gender" class="edit-mode hidden form-select profile-input">
+                                    <option value="male">男性</option>
+                                    <option value="female">女性</option>
+                                </select>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">💾 儲存個人資料</button>
-                        </form>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">身高 (cm)</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <input data-key="height" type="number" min="0"
+                                    class="edit-mode hidden form-input profile-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">體重 (kg)</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <input data-key="weight" type="number" min="0"
+                                    class="edit-mode hidden form-input profile-input">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">體脂率 (%)</label>
+                            <p class="view-mode" data-placeholder="未設定">未設定</p>
+                            <input data-key="bodyfat" type="number" min="0"
+                                class="edit-mode hidden form-input profile-input">
+                        </div>
+
+                        <!-- InBody Data Section -->
+                        <div class="section-divider" style="margin-top: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">學員 CID</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <input data-key="cid" type="text" placeholder="Client ID"
+                                    class="edit-mode hidden form-input profile-input">
+                            </div>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label class="form-label">InBody 分數</label>
+                                    <p class="view-mode" data-placeholder="--">--</p>
+                                    <input data-key="inbody_score" type="number" min="0"
+                                        class="edit-mode hidden form-input profile-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">骨骼肌重 (kg)</label>
+                                    <p class="view-mode" data-placeholder="--">--</p>
+                                    <input data-key="smm" type="number" min="0"
+                                        class="edit-mode hidden form-input profile-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">體脂肪重 (kg)</label>
+                                    <p class="view-mode" data-placeholder="--">--</p>
+                                    <input data-key="bfm" type="number" min="0"
+                                        class="edit-mode hidden form-input profile-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">BMI</label>
+                                    <p class="view-mode" data-placeholder="--">--</p>
+                                    <input data-key="bmi" type="number" min="0"
+                                        class="edit-mode hidden form-input profile-input">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">內臟脂肪等級</label>
+                                    <p class="view-mode" data-placeholder="--">--</p>
+                                    <input data-key="vfl" type="number" min="0"
+                                        class="edit-mode hidden form-input profile-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Health Status Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <ion-icon name="pulse-outline"
+                                    style="vertical-align: middle; margin-right: 0.5rem;"></ion-icon>
+                                健康狀況
+                            </h3>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label">運動經驗</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <select data-key="experience" class="edit-mode hidden form-select profile-input">
+                                    <option>初學者 (1年以下)</option>
+                                    <option>中階 (1-3年)</option>
+                                    <option>高階 (3年以上)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">生活型態</label>
+                                <p class="view-mode" data-placeholder="未設定">未設定</p>
+                                <select data-key="lifestyle" class="edit-mode hidden form-select profile-input">
+                                    <option>久坐</option>
+                                    <option>體力消耗大</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">過往病史或傷病</label>
+                            <p class="view-mode" style="white-space: pre-wrap;" data-placeholder="無">無</p>
+                            <textarea data-key="history" rows="3" placeholder="心臟病、高血壓、關節受傷等"
+                                class="edit-mode hidden form-textarea profile-input"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">靜態評估</label>
+                            <p class="view-mode" style="white-space: pre-wrap;" data-placeholder="無">無</p>
+                            <textarea data-key="static_assessment" rows="3" placeholder="記錄靜態姿勢評估的結果"
+                                class="edit-mode hidden form-textarea profile-input"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">動態評估</label>
+                            <p class="view-mode" style="white-space: pre-wrap;" data-placeholder="無">無</p>
+                            <textarea data-key="dynamic_assessment" rows="3" placeholder="記錄動態動作評估的結果"
+                                class="edit-mode hidden form-textarea profile-input"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <ion-icon name="bulb-outline"
+                                    style="vertical-align: middle; margin-right: 0.5rem;"></ion-icon>
+                                個人化建議
+                            </h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">每周運動頻率</label>
+                            <p class="view-mode" data-placeholder="未設定">未設定</p>
+                            <select data-key="frequency" class="edit-mode hidden form-select profile-input">
+                                <option value="1.2">久坐 (每周運動0-1天)</option>
+                                <option value="1.375">輕度活動 (每周運動1-3天)</option>
+                                <option value="1.55">中度活動 (每周運動3-5天)</option>
+                                <option value="1.725">高度活動 (每周運動6-7天)</option>
+                                <option value="1.9">極度活動 (體力勞動)</option>
+                            </select>
+                        </div>
+                        <div class="grid-3" style="text-align: center; margin: 1rem 0;">
+                            <div>
+                                <p class="form-label">BMR</p>
+                                <p id="bmr-display" style="font-size: 1.5rem; font-weight: 700;">--</p>
+                            </div>
+                            <div>
+                                <p class="form-label">TDEE</p>
+                                <p id="tdee-display" style="font-size: 1.5rem; font-weight: 700;">--</p>
+                            </div>
+                            <div>
+                                <p class="form-label">飲水量(ml)</p>
+                                <p id="water-display" style="font-size: 1.5rem; font-weight: 700;">--</p>
+                            </div>
+                        </div>
+
+                        <div class="section-divider">
+                            <label class="form-label">階段訓練方向</label>
+                            <p class="view-mode" style="white-space: pre-wrap;" data-placeholder="無">無</p>
+                            <textarea data-key="training_direction" rows="4" placeholder="記錄此階段的訓練目標與方向"
+                                class="edit-mode hidden form-textarea profile-input"></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <!-- ============================== -->
-                <!-- Page: Analysis                 -->
-                <!-- ============================== -->
-                <div id="page-analysis" class="page-content hidden">
-                    <h2 style="margin-bottom: 1rem;">📈 數據分析</h2>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">體態趨勢</h3>
-                        </div>
-                        <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
-                            載入分析數據後，此處將顯示體重、體脂率及訓練容量趨勢圖表。
-                        </p>
-                        <div id="chart-weight" style="width:100%; min-height: 200px;"></div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">訓練容量趨勢</h3>
-                        </div>
-                        <div id="chart-volume" style="width:100%; min-height: 200px;"></div>
+                <!-- Profile Edit Buttons -->
+                <div id="profile-actions-container" style="margin-top: 1.5rem;">
+                    <button id="edit-profile-btn" class="btn btn-secondary"
+                        style="width: 100%; padding: 0.875rem; font-size: 1.125rem;">更新個人資料</button>
+                    <div id="edit-profile-actions" class="hidden grid-2" style="margin-top: 0.5rem;">
+                        <button id="cancel-profile-btn" class="btn btn-secondary" style="width: 100%;">取消</button>
+                        <button id="save-profile-btn" class="btn btn-primary btn-glow"
+                            style="width: 100%;">儲存全部變更</button>
                     </div>
                 </div>
-
-                <!-- ============================== -->
-                <!-- Page: Records (PRs)            -->
-                <!-- ============================== -->
-                <div id="page-records" class="page-content hidden">
-                    <h2 style="margin-bottom: 1rem;">🏆 個人紀錄</h2>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">最佳表現</h3>
-                        </div>
-                        <div id="pr-list">
-                            <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
-                                開始訓練後，您的個人最佳紀錄將顯示在這裡。
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
+            <!-- ==== Workout Page ==== -->
+            <div id="page-workout" class="page hidden page-content">
+                <h2 class="page-title">訓練日誌</h2>
+                <input type="date" id="workout-date-input" class="form-input"
+                    style="background: transparent; border: none; color: var(--color-text-secondary); text-align: center; margin-bottom: 0.5rem;">
+
+                <div class="card daily-volume-display">
+                    <p class="volume-label">當日總容量</p>
+                    <p id="daily-total-volume-display" class="volume-value">0 公斤</p>
+                </div>
+
+                <div id="workout-list" style="margin-bottom: 1rem;">
+                    <!-- Exercise cards dynamically generated by JS -->
+                </div>
+
+                <div class="grid-2" style="margin-top: 1rem;">
+                    <button id="add-exercise-btn" class="btn btn-secondary" style="width: 100%;">+ 新增動作</button>
+                    <button id="load-template-btn" class="btn btn-secondary" style="width: 100%;">載入範本</button>
+                    <button id="save-as-template-btn" class="btn btn-secondary" style="width: 100%;">另存為範本</button>
+                    <button id="clear-workout-btn" class="btn btn-danger" style="width: 100%;">全部刪除</button>
+                </div>
+                <button id="save-workout-btn" class="btn btn-primary btn-glow"
+                    style="width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1.125rem;">
+                    儲存本日訓練
+                </button>
+            </div>
+
+            <!-- ==== PR Records Page ==== -->
+            <div id="page-prs" class="page hidden page-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="width: 80px;"></div>
+                    <h2 class="page-title" style="margin-bottom: 0;">成就紀錄</h2>
+                    <button id="edit-prs-btn" class="btn btn-secondary"
+                        style="padding: 0.5rem 1rem; font-size: 0.875rem;">編輯分類</button>
+                </div>
+
+                <div id="prs-loading" style="text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <p>正在載入個人紀錄...</p>
+                </div>
+
+                <div id="prs-content" class="hidden">
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); border-bottom: 1px solid rgba(255,195,0,0.3); padding-bottom: 0.25rem; margin-bottom: 0.75rem;">
+                            個人最佳紀錄 (Bests)</h3>
+                        <div id="bests-container"></div>
+                    </div>
+                    <div>
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); border-bottom: 1px solid rgba(255,195,0,0.3); padding-bottom: 0.25rem; margin-bottom: 0.75rem;">
+                            各RM區間紀錄 (Rep PRs)</h3>
+                        <div id="rep-prs-container"></div>
+                    </div>
+                </div>
+
+                <div id="prs-empty" class="hidden"
+                    style="text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <ion-icon name="trophy-outline" style="font-size: 3rem; margin-bottom: 0.5rem;"></ion-icon>
+                    <p>尚未有任何個人紀錄。</p>
+                    <p>當您的訓練超越過往表現時，紀錄將會自動出現在這裡。</p>
+                </div>
+            </div>
+
+            <!-- ==== Body Stats Page ==== -->
+            <div id="page-stats" class="page hidden page-content">
+                <h2 class="page-title">體態記錄</h2>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">前一次體態記錄 (<span id="prev-photo-date">N/A</span>)</h3>
+                    </div>
+                    <div class="grid-3" style="text-align: center;">
+                        <div id="prev-photo-front-container"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            尚無記錄</div>
+                        <div id="prev-photo-side-container"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            尚無記錄</div>
+                        <div id="prev-photo-back-container"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            尚無記錄</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">更新今日體態</h3>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="photo-date-input">記錄日期</label>
+                        <input type="date" id="photo-date-input" class="form-input">
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="photo-weight-input">體重 (kg)</label>
+                            <input type="number" id="photo-weight-input" min="0" placeholder="例如: 75.5"
+                                class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="photo-bodyfat-input">體脂率 (%)</label>
+                            <input type="number" id="photo-bodyfat-input" min="0" placeholder="例如: 15.2"
+                                class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="photo-front-upload">正面照片</label>
+                        <input type="file" id="photo-front-upload" accept="image/*" class="form-input"
+                            style="padding: 0.375rem;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="photo-side-upload">側面照片</label>
+                        <input type="file" id="photo-side-upload" accept="image/*" class="form-input"
+                            style="padding: 0.375rem;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="photo-back-upload">背面照片</label>
+                        <input type="file" id="photo-back-upload" accept="image/*" class="form-input"
+                            style="padding: 0.375rem;">
+                    </div>
+                    <div class="grid-3" style="text-align: center; margin: 1rem 0;">
+                        <div id="photo-front-preview"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            正面預覽</div>
+                        <div id="photo-side-preview"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            側面預覽</div>
+                        <div id="photo-back-preview"
+                            style="background: rgba(0,0,0,0.3); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.375rem; color: var(--color-text-muted);">
+                            背面預覽</div>
+                    </div>
+                    <button id="save-photos-btn" class="btn btn-primary btn-glow" style="width: 100%;">儲存體態照片</button>
+                </div>
+            </div>
+
+            <!-- ==== Analysis Page ==== -->
+            <div id="page-history" class="page hidden page-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="width: 40px;"></div>
+                    <h2 class="page-title" style="margin-bottom: 0;">資料分析</h2>
+                    <button id="refresh-analysis-btn"
+                        style="padding: 0.5rem; background: none; border: none; color: var(--color-text-secondary); cursor: pointer; border-radius: 0.375rem;"
+                        title="重新載入">
+                        <ion-icon name="refresh-outline" style="font-size: 1.5rem; pointer-events: none;"></ion-icon>
+                    </button>
+                </div>
+
+                <div id="history-loading"
+                    style="text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <p>正在載入歷史數據...</p>
+                </div>
+
+                <div id="history-content" class="hidden">
+                    <div class="card">
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
+                            近 3 個月體態趨勢</h3>
+                        <canvas id="body-stats-chart"></canvas>
+                    </div>
+
+                    <div class="card">
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
+                            訓練量佔比</h3>
+                        <div style="max-width: 300px; margin: 0 auto;">
+                            <canvas id="category-distribution-chart"></canvas>
+                        </div>
+                        <div id="category-legend-container"
+                            style="margin-top: 1rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1rem;">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
+                            近 3 個月訓練容量趨勢</h3>
+                        <canvas id="volume-chart"></canvas>
+                    </div>
+
+                    <div class="card">
+                        <h3
+                            style="font-size: 1.125rem; font-weight: 600; color: var(--color-yellow); margin-bottom: 0.75rem; text-align: center;">
+                            近 3 個月單一動作進步趨勢</h3>
+                        <select id="exercise-progress-select" class="form-select" style="margin-bottom: 1rem;">
+                            <option value="">請選擇一個動作來分析</option>
+                        </select>
+                        <canvas id="exercise-progress-chart"></canvas>
+                    </div>
+                </div>
+
+                <div id="history-empty" class="hidden"
+                    style="text-align: center; padding: 2rem; color: var(--color-text-secondary);">
+                    <ion-icon name="analytics-outline" style="font-size: 3rem; margin-bottom: 0.5rem;"></ion-icon>
+                    <p>尚無足夠數據可供分析。</p>
+                    <p>請先記錄您的個人資料與訓練日誌。</p>
+                </div>
+            </div>
+
         </main>
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <button class="nav-item active" data-page="dashboard">
-                <span class="nav-icon">📊</span>
-                <span>總覽</span>
+            <button data-page="dashboard" class="nav-item active">
+                <ion-icon name="person-circle-outline"></ion-icon>
+                <span>個人<br>資訊</span>
             </button>
-            <button class="nav-item" data-page="workout">
-                <span class="nav-icon">🏋️</span>
-                <span>訓練</span>
+            <button data-page="workout" class="nav-item">
+                <ion-icon name="barbell-outline"></ion-icon>
+                <span>日誌</span>
             </button>
-            <button class="nav-item" data-page="profile">
-                <span class="nav-icon">👤</span>
-                <span>個人</span>
+            <button data-page="prs" class="nav-item">
+                <ion-icon name="trophy-outline"></ion-icon>
+                <span>成就</span>
             </button>
-            <button class="nav-item" data-page="analysis">
-                <span class="nav-icon">📈</span>
+            <button data-page="stats" class="nav-item">
+                <ion-icon name="body-outline"></ion-icon>
+                <span>體態</span>
+            </button>
+            <button data-page="history" class="nav-item">
+                <ion-icon name="stats-chart-outline"></ion-icon>
                 <span>分析</span>
             </button>
-            <button class="nav-item" data-page="records">
-                <span class="nav-icon">🏆</span>
-                <span>紀錄</span>
-            </button>
         </nav>
-
     </div>
 
-    <!-- Scripts -->
+    <!-- JavaScript Modules -->
     <script src="src/apiService.js"></script>
     <script src="src/app.js"></script>
-
-    <!-- Google Login Callback (must be global) -->
-    <script>
-        function handleGoogleLogin(response) {
-            App.handleGoogleLogin(response);
-        }
-    </script>
-
 </body>
 
 </html>
