@@ -14,7 +14,13 @@
    ./scripts/setup.ps1
    ```
 
-2. 啟動開發伺服器：
+2. 設定環境變數：
+   ```powershell
+   cp .env.example .env
+   # 然後編輯 .env 檔案填入您的設定
+   ```
+
+3. 啟動開發伺服器：
    ```powershell
    ./scripts/run.ps1
    ```
@@ -27,7 +33,7 @@
 
 ## 🔧 核心技術
 <!-- TECH_START -->
-- **FastAPI**: 現代、高效的 Web 框架。
+- **Fastapi**: 現代、高效的 Web 框架。
 - **Uvicorn**: ASGI 伺服器。
 - **Pandas**: 資料處理。
 - **Requests**: HTTP 請求。

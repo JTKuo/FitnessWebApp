@@ -1,16 +1,20 @@
-# 排除 GAS MVP 資料夾
-doc/GAS MVP/
-
-# 虛擬環境
+# Python
 .venv/
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
+*.pyd
 
-# 環境變數與金鑰
+# Environment Secrets
 .env
-.env.local
 
-# IDE 與系統檔案
-.vscode/
+# Project specific
+doc/GAS MVP/
+
+# OS specific
 .DS_Store
 Thumbs.db
+
+# Agent specific
+.agent/
+.gemini/

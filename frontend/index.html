@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="個人化健身暨健康追蹤系統 - 記錄訓練、追蹤體態、分析進度">
+    <title>Fitness Tracker - 個人化健身追蹤</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- ============================== -->
+    <!-- Loading Overlay                -->
+    <!-- ============================== -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- Toast Notification             -->
+    <!-- ============================== -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ============================== -->
+    <!-- Login Section                  -->
+    <!-- ============================== -->
+    <section id="login-section" class="login-section">
+        <div class="login-card">
+            <div class="logo-icon">🏋️</div>
+            <h1>Fitness Tracker</h1>
+            <p>使用 Google 帳號登入，開始追蹤您的訓練進度</p>
+
+            <!-- 
+        ⚠️ 請將 data-client_id 替換為您在 Google Cloud Console 建立的 OAuth2 Client ID。
+        教學：https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
+      -->
+            <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                data-callback="handleGoogleLogin" data-auto_prompt="false">
+            </div>
+            <div id="g_id_signin" class="g_id_signin" data-type="standard" data-shape="pill" data-theme="filled_black"
+                data-text="signin_with" data-size="large" data-logo_alignment="left">
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================== -->
+    <!-- Main Application               -->
+    <!-- ============================== -->
+    <div id="main-app" class="hidden">
+
+        <!-- Top Navbar -->
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <span class="brand-icon">🏋️</span>
+                <span>Fitness Tracker</span>
+            </div>
+            <div class="navbar-user">
+                <img id="user-avatar" class="user-avatar hidden" alt="avatar" src="">
+                <span id="user-name" style="font-size: 0.875rem; color: #94a3b8;"></span>
+                <button id="btn-logout" class="btn-logout">登出</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+
+                <!-- Admin Panel (Hidden by default) -->
+                <div id="admin-panel" class="admin-panel hidden">
+                    <span class="admin-badge">👑 管理員</span>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">切換使用者</label>
+                        <select id="user-select" class="form-select"></select>
+                    </div>
+                </div>
+
+                <!-- Photo Reminder (Hidden by default) -->
+                <div id="photo-reminder" class="photo-reminder hidden">
+                    <span style="font-size: 1.5rem;">📸</span>
+                    <div>
+                        <strong>體態記錄提醒</strong>
+                        <p style="font-size: 0.875rem; color: #94a3b8; margin: 0;">距離上次拍照已超過 30 天，建議記錄最新體態！</p>
+                    </div>
+                </div>
+
+                <!-- ============================== -->
+                <!-- Page: Dashboard                -->
+                <!-- ============================== -->
+                <div id="page-dashboard" class="page-content">
+                    <h2 style="margin-bottom: 1rem;">📊 總覽</h2>
+
+                    <div class="stats-grid" style="margin-bottom: 1.5rem;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-weight">--</div>
+                            <div class="stat-label">體重 (kg)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-bodyfat">--</div>
+                            <div class="stat-label">體脂率 (%)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-workouts">--</div>
+                            <div class="stat-label">訓練次數</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="stat-prs">--</div>
+                            <div class="stat-label">個人紀錄</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">快速操作</h3>
+                        </div>
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <button class="btn btn-primary" data-page="workout" onclick="App.navigateTo('workout')">🏋️
+                                開始訓練</button>
+                            <button class="btn btn-secondary" data-page="profile" onclick="App.navigateTo('profile')">👤
+                                個人資料</button>
+                            <button class="btn btn-secondary" data-page="analysis"
+                                onclick="App.navigateTo('analysis')">📈 數據分析</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================== -->
+                <!-- Page: Workout                  -->
+                <!-- ============================== -->
+                <div id="page-workout" class="page-content hidden">
+                    <h2 style="margin-bottom: 1rem;">🏋️ 訓練記錄</h2>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">今日訓練</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">選擇範本</label>
+                            <select id="template-select" class="form-select">
+                                <option value="">-- 自由訓練 --</option>
+                            </select>
+                        </div>
+                        <div id="workout-exercises">
+                            <!-- 動態產生的訓練項目 -->
+                            <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
+                                選擇範本或手動新增動作來開始訓練
+                            </p>
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+                            <button class="btn btn-secondary" id="btn-add-exercise">➕ 新增動作</button>
+                            <button class="btn btn-primary" id="btn-save-workout">💾 儲存訓練</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================== -->
+                <!-- Page: Profile                  -->
+                <!-- ============================== -->
+                <div id="page-profile" class="page-content hidden">
+                    <h2 style="margin-bottom: 1rem;">👤 個人資料</h2>
+                    <div class="card">
+                        <form id="profile-form">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label class="form-label">姓名</label>
+                                    <input type="text" class="form-input" id="profile-name" placeholder="您的名字">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">年齡</label>
+                                    <input type="number" class="form-input" id="profile-age" placeholder="25">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">身高 (cm)</label>
+                                    <input type="number" class="form-input" id="profile-height" placeholder="175">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">體重 (kg)</label>
+                                    <input type="number" class="form-input" id="profile-weight" step="0.1"
+                                        placeholder="70">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">體脂率 (%)</label>
+                                    <input type="number" class="form-input" id="profile-bodyfat" step="0.1"
+                                        placeholder="15">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">性別</label>
+                                    <select class="form-select" id="profile-gender">
+                                        <option value="">-- 選擇 --</option>
+                                        <option value="male">男</option>
+                                        <option value="female">女</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">訓練方向</label>
+                                <textarea class="form-input form-textarea" id="profile-direction" rows="3"
+                                    placeholder="例如：增肌減脂、提升肌力..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">💾 儲存個人資料</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ============================== -->
+                <!-- Page: Analysis                 -->
+                <!-- ============================== -->
+                <div id="page-analysis" class="page-content hidden">
+                    <h2 style="margin-bottom: 1rem;">📈 數據分析</h2>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">體態趨勢</h3>
+                        </div>
+                        <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
+                            載入分析數據後，此處將顯示體重、體脂率及訓練容量趨勢圖表。
+                        </p>
+                        <div id="chart-weight" style="width:100%; min-height: 200px;"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">訓練容量趨勢</h3>
+                        </div>
+                        <div id="chart-volume" style="width:100%; min-height: 200px;"></div>
+                    </div>
+                </div>
+
+                <!-- ============================== -->
+                <!-- Page: Records (PRs)            -->
+                <!-- ============================== -->
+                <div id="page-records" class="page-content hidden">
+                    <h2 style="margin-bottom: 1rem;">🏆 個人紀錄</h2>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">最佳表現</h3>
+                        </div>
+                        <div id="pr-list">
+                            <p style="color: var(--color-text-muted); text-align: center; padding: 2rem;">
+                                開始訓練後，您的個人最佳紀錄將顯示在這裡。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-page="dashboard">
+                <span class="nav-icon">📊</span>
+                <span>總覽</span>
+            </button>
+            <button class="nav-item" data-page="workout">
+                <span class="nav-icon">🏋️</span>
+                <span>訓練</span>
+            </button>
+            <button class="nav-item" data-page="profile">
+                <span class="nav-icon">👤</span>
+                <span>個人</span>
+            </button>
+            <button class="nav-item" data-page="analysis">
+                <span class="nav-icon">📈</span>
+                <span>分析</span>
+            </button>
+            <button class="nav-item" data-page="records">
+                <span class="nav-icon">🏆</span>
+                <span>紀錄</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="src/apiService.js"></script>
+    <script src="src/app.js"></script>
+
+    <!-- Google Login Callback (must be global) -->
+    <script>
+        function handleGoogleLogin(response) {
+            App.handleGoogleLogin(response);
+        }
+    </script>
+
+</body>
+
+</html>
