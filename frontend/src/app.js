@@ -281,7 +281,9 @@ const APP = {
         users.forEach(user => {
             const opt = document.createElement('option');
             opt.value = user.email;
-            opt.textContent = user.name || user.email;
+            // Highlight current admin or match email
+            const name = user.name || user.email;
+            opt.textContent = (user.email === this.state.user.currentUser) ? `${name} (管理者)` : name;
             switcher.appendChild(opt);
         });
     },
@@ -809,8 +811,9 @@ const APP = {
                     bestsContainer.appendChild(div);
                 });
             } else {
-                const p = document.createElement('p');
-                p.style.cssText = 'color:var(--color-text-muted);font-size:0.875rem;padding-left:1rem;';
+                const p = document.createElement('div');
+                p.className = 'empty-category-placeholder';
+                p.style.cssText = 'color:var(--color-text-muted);font-size:0.875rem;padding:0.75rem 1rem;border:1px dashed rgba(255,195,0,0.2);border-radius:0.5rem;margin-bottom:0.5rem;text-align:center;';
                 p.textContent = '尚無紀錄。';
                 bestsContainer.appendChild(p);
             }
@@ -926,9 +929,10 @@ const APP = {
     _dragState: { el: null, placeholder: null, startY: 0, offsetY: 0, container: null },
 
     initDragAndDrop(container) {
-        if (!container) return;
+        if (!container || container.dataset.dragInit === 'true') return;
         container.addEventListener('mousedown', (e) => this._onDragStart(e, container));
         container.addEventListener('touchstart', (e) => this._onDragStart(e, container), { passive: false });
+        container.dataset.dragInit = 'true';
     },
 
     _onDragStart(e, container) {
