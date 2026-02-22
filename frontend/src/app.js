@@ -222,9 +222,9 @@ const APP = {
         if (this.state.cache.photoHistory.length === 0 || this.state.cache.photoHistory._user !== this.state.user.currentUser) {
             try {
                 this.setLoading(true);
-                const records = await API_SERVICE.getAllPhotoRecords(this.state.user.currentUser);
-                if (records.error) throw new Error(records.error);
-                this.state.cache.photoHistory = records;
+                const response = await API_SERVICE.getAllPhotoRecords(this.state.user.currentUser);
+                if (response.error) throw new Error(response.error);
+                this.state.cache.photoHistory = response.data || response || [];
                 this.state.cache.photoHistory._user = this.state.user.currentUser;
             } catch (e) {
                 this.showToast('無法載入照片歷史: ' + e.message, 'error');
@@ -324,9 +324,10 @@ const APP = {
         workoutList.appendChild(fragment);
 
         const perfEl = card.querySelector('.js-last-performance');
-        API_SERVICE.getLatestPerformance(name, this.state.user.currentUser).then(data => {
-            if (data && data.weight_kg != null) {
-                perfEl.innerHTML = `上次: <strong>${data.weight_kg} kg x ${data.reps} 次</strong>`;
+        API_SERVICE.getLatestPerformance(name, this.state.user.currentUser).then(response => {
+            const perf = response?.data || response;
+            if (perf && perf.weight_kg != null) {
+                perfEl.innerHTML = `上次: <strong>${perf.weight_kg} kg x ${perf.reps} 次</strong>`;
             } else {
                 perfEl.textContent = '無歷史紀錄';
             }
@@ -480,8 +481,8 @@ const APP = {
             try {
                 const resp = await API_SERVICE.saveWorkoutTemplate(name, exercises);
                 this.showToast(resp.message);
-                const templates = await API_SERVICE.getWorkoutTemplates(this.state.user.currentUser);
-                this.state.cache.workoutTemplates = templates;
+                const tplResp = await API_SERVICE.getWorkoutTemplates(this.state.user.currentUser);
+                this.state.cache.workoutTemplates = tplResp.data || tplResp || {};
             } catch (e) { this.showToast('儲存範本失敗: ' + e.message, 'error'); }
             finally { this.showPromptModal(false); this.setLoading(false); }
         });
@@ -504,9 +505,9 @@ const APP = {
                 const resp = await API_SERVICE.deleteWorkoutTemplate(templateName);
                 if (resp.status === 'error') throw new Error(resp.message);
                 this.showToast(resp.message);
-                const templates = await API_SERVICE.getWorkoutTemplates(this.state.user.currentUser);
-                this.state.cache.workoutTemplates = templates;
-                this.populateTemplateList(templates);
+                const tplResp2 = await API_SERVICE.getWorkoutTemplates(this.state.user.currentUser);
+                this.state.cache.workoutTemplates = tplResp2.data || tplResp2 || {};
+                this.populateTemplateList(this.state.cache.workoutTemplates);
             } catch (e) { this.showToast('刪除範本失敗: ' + e.message, 'error'); }
             finally { this.setLoading(false); }
         };
