@@ -278,12 +278,21 @@ const APP = {
         const switcher = document.getElementById('user-switcher');
         if (!switcher) return;
         switcher.innerHTML = '';
-        users.forEach(user => {
+
+        // Sort: Current user (admin) first, then others
+        const sortedUsers = [...users].sort((a, b) => {
+            if (a.email === this.state.user.currentUser) return -1;
+            if (b.email === this.state.user.currentUser) return 1;
+            return (a.name || a.email).localeCompare(b.name || b.email);
+        });
+
+        sortedUsers.forEach(user => {
             const opt = document.createElement('option');
             opt.value = user.email;
-            // Highlight current admin or match email
             const name = user.name || user.email;
-            opt.textContent = (user.email === this.state.user.currentUser) ? `${name} (管理者)` : name;
+            const isCurrent = user.email === this.state.user.currentUser;
+            opt.textContent = isCurrent ? `${name} (管理者)` : name;
+            opt.selected = isCurrent;
             switcher.appendChild(opt);
         });
     },
