@@ -1,0 +1,16 @@
+# 排除 GAS MVP 資料夾
+doc/GAS MVP/
+
+# 虛擬環境
+.venv/
+__pycache__/
+*.py[cod]
+
+# 環境變數與金鑰
+.env
+.env.local
+
+# IDE 與系統檔案
+.vscode/
+.DS_Store
+Thumbs.db
