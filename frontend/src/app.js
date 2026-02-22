@@ -50,6 +50,17 @@ const APP = {
 
     navigateTo(pageId) {
         if (this.state.ui.currentView === pageId) return;
+
+        // Reset PR edit mode when leaving PR page
+        if (this.state.ui.currentView === 'prs') {
+            const btn = document.getElementById('edit-prs-btn');
+            if (btn) {
+                btn.classList.remove('btn-primary');
+                btn.textContent = '編輯分類';
+            }
+            document.querySelectorAll('#page-prs .js-drag-handle').forEach(h => h.classList.add('hidden'));
+        }
+
         this.state.ui.currentView = pageId;
         document.querySelectorAll('.page').forEach(p => { p.classList.add('hidden'); p.classList.remove('active'); });
         const target = document.getElementById(`page-${pageId}`);
@@ -837,8 +848,9 @@ const APP = {
                     repPRsContainer.appendChild(div);
                 }
             } else {
-                const p = document.createElement('p');
-                p.style.cssText = 'color:var(--color-text-muted);font-size:0.875rem;padding-left:1rem;';
+                const p = document.createElement('div');
+                p.className = 'empty-category-placeholder';
+                p.style.cssText = 'color:var(--color-text-muted);font-size:0.875rem;padding:0.75rem 1rem;border:1px dashed rgba(255,195,0,0.2);border-radius:0.5rem;margin-bottom:0.5rem;text-align:center;';
                 p.textContent = '尚無紀錄。';
                 repPRsContainer.appendChild(p);
             }
@@ -981,11 +993,15 @@ const APP = {
     },
 
     _onDragEnd(e) {
-        const { el, placeholder, container } = this._dragState;
+        const { el, placeholder } = this._dragState;
         if (!el || !placeholder) return;
+
+        const currentContainer = placeholder.parentNode;
+        if (!currentContainer) return;
+
         el.style.position = ''; el.style.zIndex = ''; el.style.width = ''; el.style.left = ''; el.style.top = ''; el.style.opacity = ''; el.style.pointerEvents = '';
         el.classList.remove('dragging');
-        container.insertBefore(el, placeholder);
+        currentContainer.insertBefore(el, placeholder);
         placeholder.remove();
 
         // Data sync for PR cards
