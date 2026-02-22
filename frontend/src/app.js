@@ -17,9 +17,10 @@ function handleGoogleLogin(response) {
             picture: payload.picture || ''
         };
 
-        // Hide login, show app
+        // Hide login, show app, show loading
         document.getElementById('login-section').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
+        APP.setLoading(true);
 
         loadInitialData();
     }
