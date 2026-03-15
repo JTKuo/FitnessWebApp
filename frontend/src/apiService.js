@@ -32,6 +32,10 @@ const API_SERVICE = (() => {
         _idToken = null;
     }
 
+    function nouse() {
+        null;
+    }
+
     /**
      * 發送 GET 請求到 GAS 後端。
      * @param {string} action - API 動作名稱。
