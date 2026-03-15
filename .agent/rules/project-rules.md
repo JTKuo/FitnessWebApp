@@ -35,4 +35,4 @@ requirements-dev.txt：存放測試與開發所需的依賴（建議保留以區
 
 # W-AI：AI 工具使用方式
 行為定義：於 docs/AI_GUIDE.md 明確定義允許 AI 執行的操作範圍（例如：允許修改 src，但嚴禁修改或讀取金鑰資訊）。
-變更驗證：所有由 Codex 或 Gemini 生成的 Patch（修補程式），必須通過至少一個測試（Smoke Test）驗證後方可採用。
+變更驗證：所有由 Codex CLI或 Gemini CLI生成的 Patch（修補程式），必須通過至少一個測試（Smoke Test）驗證後方可採用。
