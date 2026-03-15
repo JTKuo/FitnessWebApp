@@ -95,40 +95,53 @@ function _verifyGoogleToken(idToken) {
  *   C 欄: Status (Active / Inactive)
  *
  * @param {string} email - 要檢查的 Email。
- * @returns {object|null} - 如果在白名單中且 Active，回傳 {email, role, status}；否則回傳 null。
+ * @returns {object|null} - 如果在白名單中且 Active，回傳 {email, role, status}。
  */
 function _checkWhitelist(email) {
-  if (!email || !CONFIG.CONFIG_SHEET_ID) return null;
+  if (!email) throw new Error("缺少 Email");
+  if (!CONFIG.CONFIG_SHEET_ID) throw new Error("CONFIG_SHEET_ID 尚未設定");
   try {
     const cache = CacheService.getScriptCache();
     const cacheKey = `whitelist_${email.toLowerCase()}`;
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      return parsed.status === 'Active' ? parsed : null;
-    }
+    // 為了排錯，暫時先不讀取快取（如果之前快取到錯誤狀態會一直讀到舊資料）
+    // const cached = cache.get(cacheKey);
 
     const ss = SpreadsheetApp.openById(CONFIG.CONFIG_SHEET_ID);
     const sheet = ss.getSheetByName('Whitelist');
-    if (!sheet || sheet.getLastRow() < 2) return null;
+    if (!sheet) throw new Error("在試算台中找不到名為 'Whitelist' 的頁籤。請確認下方頁籤名稱。");
+    if (sheet.getLastRow() < 2) throw new Error("Whitelist 工作表中沒有資料行。");
 
     const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+    let foundEmail = false;
+
     for (let i = 0; i < data.length; i++) {
+      if (!data[i][0]) continue;
       if (data[i][0].toString().toLowerCase().trim() === email.toLowerCase().trim()) {
+        foundEmail = true;
         const entry = {
           email: data[i][0].toString().trim(),
           role: data[i][1].toString().trim(),
           status: data[i][2].toString().trim()
         };
+        
+        if (entry.status !== 'Active') {
+            throw new Error(`Email 存在，但狀態是 '${entry.status}' 而非 'Active'。`);
+        }
+        
         // 將結果快取 10 分鐘
         cache.put(cacheKey, JSON.stringify(entry), 600);
-        return entry.status === 'Active' ? entry : null;
+        return entry;
       }
     }
+    
+    if (!foundEmail) {
+        throw new Error(`在表單中找不到符合的 Email: ${email}`);
+    }
+    
     return null;
   } catch (e) {
     Logger.log('白名單檢查失敗：' + e.toString());
-    return null;
+    throw new Error('白名單檢查發生例外狀況：' + e.toString());
   }
 }
 
@@ -146,7 +159,13 @@ function _authenticate(idToken) {
   }
 
   // 步驟 2: 檢查白名單
-  const whitelistEntry = _checkWhitelist(tokenPayload.email);
+  let whitelistEntry;
+  try {
+    whitelistEntry = _checkWhitelist(tokenPayload.email);
+  } catch (err) {
+    return { authorized: false, error: '存取遭拒詳細原因：' + err.message };
+  }
+
   if (!whitelistEntry) {
     return { authorized: false, error: '存取遭拒：您的帳號尚未獲得授權，請聯繫管理員。' };
   }
